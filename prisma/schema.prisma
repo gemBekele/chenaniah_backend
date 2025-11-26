@@ -11,7 +11,7 @@ datasource db {
 }
 
 model User {
-  userId          Int       @id @map("user_id")
+  userId          BigInt    @id @map("user_id")
   username        String?   @map("username")
   firstName       String?   @map("first_name")
   lastName        String?   @map("last_name")
@@ -23,11 +23,11 @@ model User {
   audioFileId     String?   @map("audio_file_id")
   audioDriveLink  String?   @map("audio_drive_link")
   audioFilePath   String?   @map("audio_file_path")
-  fileSize        Int?      @map("file_size")
+  fileSize        BigInt?   @map("file_size")
   audioDuration   Float?    @map("audio_duration")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
-  submissionCount Int       @default(0) @map("submission_count")
+  submissionCount BigInt    @default(0) @map("submission_count")
   lastSubmissionAt DateTime? @map("last_submission_at")
 
   submissions Submission[]
@@ -37,8 +37,8 @@ model User {
 }
 
 model Submission {
-  id               Int       @id @default(autoincrement())
-  userId           Int?      @map("user_id")
+  id               BigInt    @id @default(autoincrement())
+  userId           BigInt?   @map("user_id")
   name             String    @map("name")
   address          String    @map("address")
   phone            String    @map("phone")
@@ -62,8 +62,8 @@ model Submission {
 }
 
 model RateLimit {
-  userId          Int      @id @map("user_id")
-  submissionCount Int      @default(0) @map("submission_count")
+  userId          BigInt   @id @map("user_id")
+  submissionCount BigInt   @default(0) @map("submission_count")
   windowStart     DateTime @default(now()) @map("window_start")
   lastAction      DateTime @default(now()) @map("last_action")
 
@@ -151,9 +151,11 @@ model Student {
   passwordHash            String    @map("password_hash")
   fullNameAmharic         String?   @map("full_name_amharic")
   fullNameEnglish         String?   @map("full_name_english")
+  gender                  String?   @map("gender") // male, female
   localChurch             String?   @map("local_church")
   address                 String?   @db.Text
   phone                   String    @unique
+  photoPath               String?   @map("photo_path")
   profileComplete         Boolean   @default(false) @map("profile_complete")
   idDocumentPath          String?   @map("id_document_path")
   recommendationLetterPath String?  @map("recommendation_letter_path")

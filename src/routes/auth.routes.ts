@@ -252,9 +252,9 @@ router.post('/student/register', async (req: Request, res: Response) => {
   }
 
   try {
-    const { fullNameAmharic, fullNameEnglish, localChurch, address, phone, username, password } = req.body;
+    const { fullNameAmharic, fullNameEnglish, gender, localChurch, address, phone, username, password } = req.body;
 
-    if (!fullNameAmharic || !fullNameEnglish || !localChurch || !address || !phone || !username || !password) {
+    if (!fullNameAmharic || !fullNameEnglish || !gender || !localChurch || !address || !phone || !username || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -314,6 +314,7 @@ router.post('/student/register', async (req: Request, res: Response) => {
       password,
       fullNameAmharic,
       fullNameEnglish,
+      gender,
       localChurch,
       address,
       phone,

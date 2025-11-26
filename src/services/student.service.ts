@@ -10,6 +10,7 @@ export class StudentService {
     password: string;
     fullNameAmharic?: string;
     fullNameEnglish?: string;
+    gender?: string;
     localChurch?: string;
     address?: string;
     phone: string;
@@ -38,6 +39,7 @@ export class StudentService {
         passwordHash,
         fullNameAmharic: data.fullNameAmharic,
         fullNameEnglish: data.fullNameEnglish,
+        gender: data.gender,
         localChurch: data.localChurch,
         address: data.address,
         phone: data.phone,
