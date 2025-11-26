@@ -1,0 +1,232 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId          Int       @id @map("user_id")
+  username        String?   @map("username")
+  firstName       String?   @map("first_name")
+  lastName        String?   @map("last_name")
+  state           String    @default("idle") @map("state")
+  name            String?   @map("name")
+  address         String?   @map("address")
+  phone           String?   @map("phone")
+  church          String?   @map("church")
+  audioFileId     String?   @map("audio_file_id")
+  audioDriveLink  String?   @map("audio_drive_link")
+  audioFilePath   String?   @map("audio_file_path")
+  fileSize        Int?      @map("file_size")
+  audioDuration   Float?    @map("audio_duration")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  submissionCount Int       @default(0) @map("submission_count")
+  lastSubmissionAt DateTime? @map("last_submission_at")
+
+  submissions Submission[]
+  rateLimit   RateLimit?
+
+  @@map("users")
+}
+
+model Submission {
+  id               Int       @id @default(autoincrement())
+  userId           Int?      @map("user_id")
+  name             String    @map("name")
+  address          String    @map("address")
+  phone            String    @map("phone")
+  church           String    @map("church")
+  telegramUsername String?   @map("telegram_username")
+  audioFilePath    String    @map("audio_file_path")
+  audioFileSize    Int?      @map("audio_file_size")
+  audioDuration    Float?    @map("audio_duration")
+  submittedAt      DateTime  @default(now()) @map("submitted_at")
+  status           String    @default("pending") @map("status")
+  reviewerComments String?   @map("reviewer_comments")
+  reviewedAt       DateTime? @map("reviewed_at")
+  reviewedBy       String?   @map("reviewed_by")
+
+  user User? @relation(fields: [userId], references: [userId])
+
+  @@index([status], map: "idx_submissions_status")
+  @@index([userId], map: "idx_submissions_user_id")
+  @@index([submittedAt], map: "idx_submissions_submitted_at")
+  @@map("submissions")
+}
+
+model RateLimit {
+  userId          Int      @id @map("user_id")
+  submissionCount Int      @default(0) @map("submission_count")
+  windowStart     DateTime @default(now()) @map("window_start")
+  lastAction      DateTime @default(now()) @map("last_action")
+
+  user User @relation(fields: [userId], references: [userId])
+
+  @@map("rate_limits")
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model TimeSlot {
+  id        Int      @id @default(autoincrement())
+  time      String
+  label     String
+  date      String
+  available Boolean  @default(true)
+  period    String?
+  location  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([time, date])
+  @@index([date], map: "idx_time_slots_date")
+  @@index([available], map: "idx_time_slots_available")
+  @@map("time_slots")
+}
+
+model Appointment {
+  id                      Int       @id @default(autoincrement())
+  applicantName           String    @map("applicant_name")
+  applicantEmail          String    @map("applicant_email")
+  applicantPhone          String    @map("applicant_phone")
+  scheduledDate           String    @map("scheduled_date")
+  scheduledTime           String    @map("scheduled_time")
+  status                  String    @default("scheduled")
+  notes                   String?
+  selectedSong            String?   @map("selected_song")
+  additionalSong          String?   @map("additional_song")
+  additionalSongSinger    String?   @map("additional_song_singer")
+  coordinatorVerified     Boolean   @default(false) @map("coordinator_verified")
+  coordinatorVerifiedAt   DateTime? @map("coordinator_verified_at")
+  coordinatorApproved     Boolean   @default(false) @map("coordinator_approved")
+  coordinatorApprovedAt   DateTime? @map("coordinator_approved_at")
+  finalDecision           String?   @map("final_decision")
+  decisionMadeAt          DateTime? @map("decision_made_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  evaluations InterviewEvaluation[]
+  students    Student[]
+
+  @@index([status], map: "idx_appointments_status")
+  @@index([scheduledDate], map: "idx_appointments_date")
+  @@index([coordinatorVerified], map: "idx_appointments_coordinator_verified")
+  @@map("appointments")
+}
+
+model InterviewEvaluation {
+  id           Int      @id @default(autoincrement())
+  appointmentId Int     @map("appointment_id")
+  judgeName    String   @map("judge_name")
+  criteriaName String   @map("criteria_name")
+  rating       Int
+  comments     String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@unique([appointmentId, judgeName, criteriaName])
+  @@index([appointmentId], map: "idx_evaluations_appointment_id")
+  @@index([judgeName], map: "idx_evaluations_judge_name")
+  @@map("interview_evaluations")
+}
+
+model Student {
+  id                      Int       @id @default(autoincrement())
+  username                String    @unique
+  passwordHash            String    @map("password_hash")
+  fullNameAmharic         String?   @map("full_name_amharic")
+  fullNameEnglish         String?   @map("full_name_english")
+  localChurch             String?   @map("local_church")
+  address                 String?   @db.Text
+  phone                   String    @unique
+  profileComplete         Boolean   @default(false) @map("profile_complete")
+  idDocumentPath          String?   @map("id_document_path")
+  recommendationLetterPath String?  @map("recommendation_letter_path")
+  essay                   String?   @db.Text
+  appointmentId           Int?      @map("appointment_id")
+  status                  String    @default("active") // active, inactive, graduated, dismissed
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  appointment             Appointment? @relation(fields: [appointmentId], references: [id])
+  assignmentSubmissions   AssignmentSubmission[]
+  payments                Payment[]
+
+  @@index([username], map: "idx_students_username")
+  @@index([phone], map: "idx_students_phone")
+  @@index([status], map: "idx_students_status")
+  @@map("students")
+}
+
+model Assignment {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?   @db.Text
+  dueDate     DateTime  @map("due_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  submissions AssignmentSubmission[]
+
+  @@index([dueDate], map: "idx_assignments_due_date")
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id          Int       @id @default(autoincrement())
+  studentId   Int       @map("student_id")
+  assignmentId Int      @map("assignment_id")
+  filePath    String?   @map("file_path")
+  text        String?   @db.Text
+  grade       Int?      // 0-100
+  feedback    String?   @db.Text
+  submittedAt DateTime  @default(now()) @map("submitted_at")
+  gradedAt    DateTime? @map("graded_at")
+  gradedBy    String?   @map("graded_by")
+
+  student     Student   @relation(fields: [studentId], references: [id])
+  assignment  Assignment @relation(fields: [assignmentId], references: [id])
+
+  @@unique([studentId, assignmentId])
+  @@index([studentId], map: "idx_assignment_submissions_student_id")
+  @@index([assignmentId], map: "idx_assignment_submissions_assignment_id")
+  @@index([submittedAt], map: "idx_assignment_submissions_submitted_at")
+  @@map("assignment_submissions")
+}
+
+model Payment {
+  id            Int       @id @default(autoincrement())
+  studentId     Int       @map("student_id")
+  amount        Float
+  month         String    // Format: "YYYY-MM"
+  status        String    @default("pending") // pending, paid, overdue
+  paidAt        DateTime? @map("paid_at")
+  notes         String?   @db.Text
+  depositSlipPath String? @map("deposit_slip_path")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  student       Student   @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, month])
+  @@index([studentId], map: "idx_payments_student_id")
+  @@index([month], map: "idx_payments_month")
+  @@index([status], map: "idx_payments_status")
+  @@map("payments")
+}
+

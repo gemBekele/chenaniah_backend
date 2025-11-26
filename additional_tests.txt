@@ -1,0 +1,30 @@
+=== Additional Endpoint Tests ===
+
+9. Coordinator Login:
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImNvb3JkaW5hdG9yIiwicm9sZSI6ImNvb3JkaW5hdG9yIiwiZXhwIjoxNzY0MDg5MzU3LCJpYXQiOjE3NjQwMDI5NTd9.1dxFA9bd5OmukkCZ8ck4thHEAcS95usNZD702yldrWY",
+  "username": "coordinator",
+  "role": "coordinator"
+}
+
+10. Bulk Create Time Slots:
+{
+  "success": true,
+  "message": "Created 0 time slots, skipped 6 existing slots",
+  "slots_created": 0,
+  "slots_skipped": 6
+}
+
+11. Get Time Slots for date:
+{
+  "success": true,
+  "count": 6
+}
+
+12. Set Registration Status:
+{
+  "success": true,
+  "message": "Registration opened successfully",
+  "registration_open": true
+}

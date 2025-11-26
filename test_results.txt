@@ -1,0 +1,35 @@
+=== Backend Endpoint Tests ===
+
+1. Health Check:
+{"status":"healthy","timestamp":"2025-11-24T16:48:48.312Z"}
+
+2. Admin Login:
+{"success":true,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6ImFkbWluIiwiZXhwIjoxNzY0MDg5MzI4LCJpYXQiOjE3NjQwMDI5Mjh9.Z6661nw6e_Z-6LfWNTV52jMPEAQ9rK-pdMOQBtkkF2s","username":"admin","role":"admin"}
+
+
+3. Get Submissions:
+{
+  "success": true,
+  "total": 0
+}
+
+
+4. Get Stats:
+{"success":true,"stats":{"total":0,"pending":0,"approved":0,"rejected":0}}
+
+5. Get Time Slots (PUBLIC):
+{
+  "success": true,
+  "count": 2
+}
+
+
+6. Create Time Slot:
+{"success":true,"message":"Time slot created successfully"}
+
+7. Get Schedule Stats:
+{"success":true,"stats":{"totalAppointments":0,"scheduled":0,"accepted":0,"rejected":0,"cancelled":0}}
+
+8. Verify Applicant (PUBLIC):
+{"success":true,"is_applicant":false,"applicant_name":null}
+
