@@ -69,7 +69,7 @@ NODE_ENV=production
 
 # Admin Credentials
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-this-secure-password
+ADMIN_PASSWORD=admin123
 
 # Coordinator Credentials
 COORDINATOR_USERNAME=coordinator

@@ -104,6 +104,7 @@ export class StudentService {
       idDocumentPath?: string;
       recommendationLetterPath?: string;
       essay?: string;
+      photoPath?: string;
     }
   ) {
     // Check if profile is complete
@@ -118,13 +119,15 @@ export class StudentService {
     const idDocumentPath = data.idDocumentPath ?? student.idDocumentPath;
     const recommendationLetterPath = data.recommendationLetterPath ?? student.recommendationLetterPath;
     const essay = data.essay ?? student.essay;
+    const photoPath = data.photoPath ?? student.photoPath;
 
     const profileComplete =
       !!fullNameAmharic &&
       !!fullNameEnglish &&
       !!idDocumentPath &&
       !!recommendationLetterPath &&
-      !!essay;
+      !!essay &&
+      !!photoPath;
 
     return prisma.student.update({
       where: { id },
@@ -141,7 +144,7 @@ export class StudentService {
     limit?: number;
     offset?: number;
   }) {
-    const { status, searchQuery, limit = 100, offset = 0 } = params;
+    const { status, searchQuery, limit = 10000, offset = 0 } = params;
 
     const where: Prisma.StudentWhereInput = {};
 
@@ -241,6 +244,11 @@ export class StudentService {
         status: student.status,
         profileComplete: student.profileComplete,
         createdAt: student.createdAt,
+        photoPath: student.photoPath,
+        idDocumentPath: student.idDocumentPath,
+        recommendationLetterPath: student.recommendationLetterPath,
+        essay: student.essay,
+        localChurch: student.localChurch,
       },
       assignments: {
         total: totalAssignments,
@@ -259,7 +267,7 @@ export class StudentService {
     };
   }
 
-  async saveUploadedFile(file: Express.Multer.File, type: 'id' | 'recommendation'): Promise<string> {
+  async saveUploadedFile(file: Express.Multer.File, type: 'id' | 'recommendation' | 'portrait'): Promise<string> {
     const uploadsDir = path.join(process.cwd(), 'uploads', 'student-documents');
     
     // Ensure directory exists

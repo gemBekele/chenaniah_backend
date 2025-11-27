@@ -228,6 +228,8 @@ router.post('/student/login', async (req: Request, res: Response) => {
       hasIdDocument: !!student.idDocumentPath,
       hasRecommendationLetter: !!student.recommendationLetterPath,
       hasEssay: !!student.essay,
+      hasPortrait: !!student.photoPath,
+      photoPath: student.photoPath,
     };
 
     return res.json({
@@ -342,6 +344,8 @@ router.post('/student/register', async (req: Request, res: Response) => {
       hasIdDocument: !!student.idDocumentPath,
       hasRecommendationLetter: !!student.recommendationLetterPath,
       hasEssay: !!student.essay,
+      hasPortrait: !!student.photoPath,
+      photoPath: student.photoPath,
     };
 
     return res.json({

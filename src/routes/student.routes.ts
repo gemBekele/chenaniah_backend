@@ -62,6 +62,8 @@ router.get('/profile', tokenRequired, async (req: AuthRequest, res: Response) =>
       hasIdDocument: !!student.idDocumentPath,
       hasRecommendationLetter: !!student.recommendationLetterPath,
       hasEssay: !!student.essay,
+      hasPortrait: !!student.photoPath,
+      photoPath: student.photoPath,
     };
 
     return res.json({
@@ -90,12 +92,20 @@ router.post('/upload-document', tokenRequired, upload.single('file'), async (req
 
     const { type } = req.body;
 
-    if (!type || (type !== 'id' && type !== 'recommendation')) {
+    if (!type || (type !== 'id' && type !== 'recommendation' && type !== 'portrait')) {
       return res.status(400).json({ error: 'Invalid document type' });
     }
 
     if (!req.file) {
       return res.status(400).json({ error: 'File is required' });
+    }
+
+    // Validate file type for portrait (images only)
+    if (type === 'portrait') {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: 'Portrait must be an image file (JPG, PNG)' });
+      }
     }
 
     // Save file
@@ -105,15 +115,23 @@ router.post('/upload-document', tokenRequired, upload.single('file'), async (req
     const updateData: any = {};
     if (type === 'id') {
       updateData.idDocumentPath = filePath;
-    } else {
+    } else if (type === 'recommendation') {
       updateData.recommendationLetterPath = filePath;
+    } else if (type === 'portrait') {
+      updateData.photoPath = filePath;
     }
 
     await studentService.updateStudentProfile(userId, updateData);
 
+    const messages: { [key: string]: string } = {
+      'id': 'ID document',
+      'recommendation': 'Recommendation letter',
+      'portrait': 'Portrait photo'
+    };
+
     return res.json({
       success: true,
-      message: `${type === 'id' ? 'ID document' : 'Recommendation letter'} uploaded successfully`,
+      message: `${messages[type]} uploaded successfully`,
     });
   } catch (error: any) {
     console.error('Error uploading document:', error);
