@@ -481,6 +481,136 @@ router.post('/student/register', async (req: Request, res: Response) => {
   }
 });
 
+// Forgot password - verify phone and username
+router.post('/student/forgot-password/verify', async (req: Request, res: Response) => {
+  addCorsHeaders(res, req);
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  try {
+    const { username, phone } = req.body;
+
+    if (!username || !phone) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Username and phone number are required' 
+      });
+    }
+
+    const prisma = (await import('../db')).default;
+    const student = await prisma.student.findUnique({
+      where: { username },
+    });
+
+    if (!student) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Username not found' 
+      });
+    }
+
+    // Normalize phone numbers to compare last 8 digits
+    const studentPhoneDigits = student.phone.replace(/\D/g, '');
+    const providedPhoneDigits = phone.replace(/\D/g, '');
+    
+    if (studentPhoneDigits.length < 8 || providedPhoneDigits.length < 8) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Invalid phone number format' 
+      });
+    }
+
+    const studentLast8 = studentPhoneDigits.slice(-8);
+    const providedLast8 = providedPhoneDigits.slice(-8);
+
+    if (studentLast8 !== providedLast8) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Phone number does not match the username' 
+      });
+    }
+
+    // Verification successful
+    return res.json({
+      success: true,
+      message: 'Verification successful. You can now reset your password.',
+    });
+  } catch (error: any) {
+    console.error('Forgot password verification error:', error);
+    return res.status(500).json({ 
+      success: false,
+      error: error.message || 'Internal server error' 
+    });
+  }
+});
+
+// Reset password
+router.post('/student/forgot-password/reset', async (req: Request, res: Response) => {
+  addCorsHeaders(res, req);
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  try {
+    const { username, phone, newPassword } = req.body;
+
+    if (!username || !phone || !newPassword) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Username, phone number, and new password are required' 
+      });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    if (newPassword.length > 128) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Password must be less than 128 characters' 
+      });
+    }
+
+    const { studentService } = await import('../services/student.service');
+    await studentService.resetPassword(username, phone, newPassword);
+
+    return res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now login with your new password.',
+    });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    
+    // Handle specific errors
+    if (error.message === 'Student not found') {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Username not found' 
+      });
+    }
+    
+    if (error.message === 'Phone number does not match') {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Phone number does not match the username' 
+      });
+    }
+
+    return res.status(400).json({ 
+      success: false,
+      error: error.message || 'Failed to reset password' 
+    });
+  }
+});
+
 // Handle OPTIONS for CORS
 router.options('*', (req: Request, res: Response) => {
   addCorsHeaders(res, req);

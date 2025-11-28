@@ -80,6 +80,50 @@ export class StudentService {
     return studentWithoutPassword;
   }
 
+  async resetPassword(username: string, phone: string, newPassword: string) {
+    // Find student by username
+    const student = await prisma.student.findUnique({
+      where: { username },
+    });
+
+    if (!student) {
+      throw new Error('Student not found');
+    }
+
+    // Normalize phone numbers to compare last 8 digits
+    const studentPhoneDigits = student.phone.replace(/\D/g, '');
+    const providedPhoneDigits = phone.replace(/\D/g, '');
+    
+    if (studentPhoneDigits.length < 8 || providedPhoneDigits.length < 8) {
+      throw new Error('Invalid phone number format');
+    }
+
+    const studentLast8 = studentPhoneDigits.slice(-8);
+    const providedLast8 = providedPhoneDigits.slice(-8);
+
+    if (studentLast8 !== providedLast8) {
+      throw new Error('Phone number does not match');
+    }
+
+    // Validate new password
+    if (newPassword.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+
+    if (newPassword.length > 128) {
+      throw new Error('Password must be less than 128 characters');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    return prisma.student.update({
+      where: { username },
+      data: { passwordHash },
+    });
+  }
+
   async getStudentById(id: number) {
     const student = await prisma.student.findUnique({
       where: { id },
