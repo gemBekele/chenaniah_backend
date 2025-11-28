@@ -30,6 +30,19 @@ export class StudentService {
       throw new Error('Username or phone number already exists');
     }
 
+    // Additional safeguard: Check if appointment has already been used
+    if (data.appointmentId) {
+      const existingWithAppointment = await prisma.student.findFirst({
+        where: {
+          appointmentId: data.appointmentId,
+        },
+      });
+
+      if (existingWithAppointment) {
+        throw new Error('This appointment has already been used to create a student account');
+      }
+    }
+
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, 10);
 
