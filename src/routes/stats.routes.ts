@@ -20,3 +20,8 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
 export default router;
 
 
+
+
+
+
+

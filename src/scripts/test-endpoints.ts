@@ -9,6 +9,25 @@ interface TestResult {
   response?: any;
 }
 
+interface ApiResponse {
+  error?: string;
+  [key: string]: any;
+}
+
+interface AdminLoginResponse {
+  token?: string;
+  [key: string]: any;
+}
+
+interface AppointmentsResponse {
+  appointments?: Array<{
+    final_decision?: string;
+    applicant_phone?: string;
+    [key: string]: any;
+  }>;
+  [key: string]: any;
+}
+
 const results: TestResult[] = [];
 
 async function testEndpoint(
@@ -23,7 +42,7 @@ async function testEndpoint(
       ...options,
     });
 
-    const data = await response.json().catch(() => ({}));
+    const data = (await response.json().catch(() => ({}))) as ApiResponse;
 
     if (response.ok || response.status < 500) {
       return {
@@ -60,7 +79,7 @@ async function runTests() {
     }),
   });
 
-  const adminData = await adminLoginResponse.json();
+  const adminData = (await adminLoginResponse.json()) as AdminLoginResponse;
   const adminToken = adminData.token;
 
   if (!adminToken) {
@@ -123,11 +142,11 @@ async function runTests() {
   const appointmentsResponse = await fetch(`${API_BASE_URL}/schedule/appointments`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
-  const appointmentsData = await appointmentsResponse.json();
+  const appointmentsData = (await appointmentsResponse.json()) as AppointmentsResponse;
   
   if (appointmentsData.appointments && appointmentsData.appointments.length > 0) {
     const acceptedAppt = appointmentsData.appointments.find(
-      (apt: any) => apt.final_decision === 'accepted'
+      (apt) => apt.final_decision === 'accepted'
     );
 
     if (acceptedAppt) {
@@ -172,5 +191,10 @@ async function runTests() {
 
 // Run tests
 runTests().catch(console.error);
+
+
+
+
+
 
 

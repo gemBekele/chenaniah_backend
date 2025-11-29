@@ -37,7 +37,7 @@ router.get(
     try {
       const status = req.query.status as string | undefined;
       const searchQuery = req.query.search as string | undefined;
-      const limit = parseInt(req.query.limit as string) || 100;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const offset = parseInt(req.query.offset as string) || 0;
 
       const result = await studentService.getAllStudents({
@@ -383,5 +383,10 @@ router.options('*', (req: Request, res: Response) => {
 });
 
 export default router;
+
+
+
+
+
 
 

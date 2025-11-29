@@ -6,5 +6,12 @@ dist/
 audio_files/
 *.db
 *.sqlite
+uploads/
+logs/
+
+
+
+
+
 
 

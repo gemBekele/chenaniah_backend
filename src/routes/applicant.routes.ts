@@ -56,11 +56,17 @@ router.post('/status', async (req: Request, res: Response) => {
     let appointmentDate: string | null = null;
     let appointmentTime: string | null = null;
     let appointmentStatus: string | null = null;
+    let applicantNameFromAppointment: string | null = null;
 
     for (const apt of appointments) {
       // Appointments are already transformed to snake_case by database service
       const decision = apt.final_decision;
       const status = apt.status;
+
+      // Store applicant name from appointment
+      if (apt.applicant_name && !applicantNameFromAppointment) {
+        applicantNameFromAppointment = apt.applicant_name;
+      }
 
       if (!decision) {
         if (status === 'completed') {
@@ -85,6 +91,56 @@ router.post('/status', async (req: Request, res: Response) => {
       }
     }
 
+    // If no submission found, but we have an appointment, still return the appointment data
+    if (!submission && appointments.length === 0) {
+      addCorsHeaders(res, req);
+      return res.json({
+        success: true,
+        is_applicant: false,
+        message: 'Phone number not found in our system',
+      });
+    }
+
+    // If we have an appointment but no submission, use appointment data
+    if (!submission && appointments.length > 0) {
+      // Determine overall status based on appointment
+      let overallStatus: string;
+      let statusMessage: string;
+
+      if (finalDecision) {
+        if (finalDecision.toLowerCase() === 'accepted') {
+          overallStatus = 'accepted';
+          statusMessage = 'Congratulations! You have been accepted.';
+        } else {
+          overallStatus = 'rejected';
+          statusMessage = 'Unfortunately, your application was not approved at this time.';
+        }
+      } else if (appointmentStatus === 'scheduled') {
+        overallStatus = 'approved';
+        statusMessage = 'Your interview has been scheduled.';
+      } else {
+        overallStatus = 'pending';
+        statusMessage = 'Your application is still under review. Please check back later.';
+      }
+
+      addCorsHeaders(res, req);
+      return res.json({
+        success: true,
+        is_applicant: true,
+        applicant_name: applicantNameFromAppointment || 'Applicant',
+        submission_status: null,
+        final_decision: finalDecision,
+        overall_status: overallStatus,
+        status_message: statusMessage,
+        decision_made_at: decisionMadeAt,
+        appointment_date: appointmentDate,
+        appointment_time: appointmentTime,
+        submitted_at: null,
+        reviewer_comments: null,
+      });
+    }
+
+    // At this point, submission must exist (we've already handled the case where it doesn't)
     if (!submission) {
       addCorsHeaders(res, req);
       return res.json({

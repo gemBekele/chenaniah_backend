@@ -9,9 +9,16 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed:students": "ts-node-dev --transpile-only src/scripts/seed-students.ts",
-    "test:endpoints": "ts-node-dev --transpile-only src/scripts/test-endpoints.ts"
+    "test:endpoints": "ts-node-dev --transpile-only src/scripts/test-endpoints.ts",
+    "deploy": "npm run build && pm2 restart ecosystem.config.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop chenaniah-api-v2",
+    "pm2:restart": "pm2 restart chenaniah-api-v2",
+    "pm2:logs": "pm2 logs chenaniah-api-v2",
+    "pm2:monit": "pm2 monit"
   },
   "keywords": [
     "express",

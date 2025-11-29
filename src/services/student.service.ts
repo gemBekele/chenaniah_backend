@@ -10,6 +10,7 @@ export class StudentService {
     password: string;
     fullNameAmharic?: string;
     fullNameEnglish?: string;
+    gender?: string;
     localChurch?: string;
     address?: string;
     phone: string;
@@ -29,6 +30,19 @@ export class StudentService {
       throw new Error('Username or phone number already exists');
     }
 
+    // Additional safeguard: Check if appointment has already been used
+    if (data.appointmentId) {
+      const existingWithAppointment = await prisma.student.findFirst({
+        where: {
+          appointmentId: data.appointmentId,
+        },
+      });
+
+      if (existingWithAppointment) {
+        throw new Error('This appointment has already been used to create a student account');
+      }
+    }
+
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, 10);
 
@@ -38,6 +52,7 @@ export class StudentService {
         passwordHash,
         fullNameAmharic: data.fullNameAmharic,
         fullNameEnglish: data.fullNameEnglish,
+        gender: data.gender,
         localChurch: data.localChurch,
         address: data.address,
         phone: data.phone,
@@ -63,6 +78,50 @@ export class StudentService {
     // Remove password hash from response
     const { passwordHash, ...studentWithoutPassword } = student;
     return studentWithoutPassword;
+  }
+
+  async resetPassword(username: string, phone: string, newPassword: string) {
+    // Find student by username
+    const student = await prisma.student.findUnique({
+      where: { username },
+    });
+
+    if (!student) {
+      throw new Error('Student not found');
+    }
+
+    // Normalize phone numbers to compare last 8 digits
+    const studentPhoneDigits = student.phone.replace(/\D/g, '');
+    const providedPhoneDigits = phone.replace(/\D/g, '');
+    
+    if (studentPhoneDigits.length < 8 || providedPhoneDigits.length < 8) {
+      throw new Error('Invalid phone number format');
+    }
+
+    const studentLast8 = studentPhoneDigits.slice(-8);
+    const providedLast8 = providedPhoneDigits.slice(-8);
+
+    if (studentLast8 !== providedLast8) {
+      throw new Error('Phone number does not match');
+    }
+
+    // Validate new password
+    if (newPassword.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+
+    if (newPassword.length > 128) {
+      throw new Error('Password must be less than 128 characters');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    return prisma.student.update({
+      where: { username },
+      data: { passwordHash },
+    });
   }
 
   async getStudentById(id: number) {
@@ -102,6 +161,7 @@ export class StudentService {
       idDocumentPath?: string;
       recommendationLetterPath?: string;
       essay?: string;
+      photoPath?: string;
     }
   ) {
     // Check if profile is complete
@@ -116,13 +176,15 @@ export class StudentService {
     const idDocumentPath = data.idDocumentPath ?? student.idDocumentPath;
     const recommendationLetterPath = data.recommendationLetterPath ?? student.recommendationLetterPath;
     const essay = data.essay ?? student.essay;
+    const photoPath = data.photoPath ?? student.photoPath;
 
     const profileComplete =
       !!fullNameAmharic &&
       !!fullNameEnglish &&
       !!idDocumentPath &&
       !!recommendationLetterPath &&
-      !!essay;
+      !!essay &&
+      !!photoPath;
 
     return prisma.student.update({
       where: { id },
@@ -139,7 +201,7 @@ export class StudentService {
     limit?: number;
     offset?: number;
   }) {
-    const { status, searchQuery, limit = 100, offset = 0 } = params;
+    const { status, searchQuery, limit = 10000, offset = 0 } = params;
 
     const where: Prisma.StudentWhereInput = {};
 
@@ -239,6 +301,11 @@ export class StudentService {
         status: student.status,
         profileComplete: student.profileComplete,
         createdAt: student.createdAt,
+        photoPath: student.photoPath,
+        idDocumentPath: student.idDocumentPath,
+        recommendationLetterPath: student.recommendationLetterPath,
+        essay: student.essay,
+        localChurch: student.localChurch,
       },
       assignments: {
         total: totalAssignments,
@@ -257,7 +324,7 @@ export class StudentService {
     };
   }
 
-  async saveUploadedFile(file: Express.Multer.File, type: 'id' | 'recommendation'): Promise<string> {
+  async saveUploadedFile(file: Express.Multer.File, type: 'id' | 'recommendation' | 'portrait'): Promise<string> {
     const uploadsDir = path.join(process.cwd(), 'uploads', 'student-documents');
     
     // Ensure directory exists
