@@ -346,24 +346,24 @@ router.put(
 );
 
 // Mark attendance
-router.put(
-  '/appointments/:appointment_id/attendance',
-  tokenRequired,
-  roleRequired(['coordinator', 'admin']),
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const appointmentId = parseInt(req.params.appointment_id);
-      const { present } = req.body;
+// router.put(
+//   '/appointments/:appointment_id/attendance',
+//   tokenRequired,
+//   roleRequired(['coordinator', 'admin']),
+//   async (req: AuthRequest, res: Response) => {
+//     try {
+//       const appointmentId = parseInt(req.params.appointment_id);
+//       const { present } = req.body;
 
-      await dbService.verifyApplicantCoordinator(appointmentId, present === true);
+//       await dbService.verifyApplicantCoordinator(appointmentId, present === true);
 
-      return res.json({ success: true, message: 'Attendance updated' });
-    } catch (error: any) {
-      console.error('Error updating attendance:', error);
-      return res.status(500).json({ success: false, error: error.message });
-    }
-  }
-);
+//       return res.json({ success: true, message: 'Attendance updated' });
+//     } catch (error: any) {
+//       console.error('Error updating attendance:', error);
+//       return res.status(500).json({ success: false, error: error.message });
+//     }
+//   }
+// );
 
 // Approve applicant
 router.put(
@@ -386,20 +386,20 @@ router.put(
 );
 
 // Get attendance appointments
-router.get(
-  '/appointments/attendance',
-  tokenRequired,
-  roleRequired(['coordinator', 'admin']),
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const appointments = await dbService.getVerifiedAppointments();
-      return res.json({ success: true, appointments });
-    } catch (error: any) {
-      console.error('Error fetching appointments:', error);
-      return res.status(500).json({ success: false, error: error.message });
-    }
-  }
-);
+// router.get(
+//   '/appointments/attendance',
+//   tokenRequired,
+//   roleRequired(['coordinator', 'admin']),
+//   async (req: AuthRequest, res: Response) => {
+//     try {
+//       const appointments = await dbService.getVerifiedAppointments();
+//       return res.json({ success: true, appointments });
+//     } catch (error: any) {
+//       console.error('Error fetching appointments:', error);
+//       return res.status(500).json({ success: false, error: error.message });
+//     }
+//   }
+// );
 
 // Get appointments for evaluation
 router.get(
