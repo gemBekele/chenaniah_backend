@@ -140,6 +140,16 @@ router.post('/status', async (req: Request, res: Response) => {
       });
     }
 
+    // At this point, submission must exist (we've already handled the case where it doesn't)
+    if (!submission) {
+      addCorsHeaders(res, req);
+      return res.json({
+        success: true,
+        is_applicant: false,
+        message: 'Phone number not found in our system',
+      });
+    }
+
     // Determine overall status
     let overallStatus: string;
     let statusMessage: string;
