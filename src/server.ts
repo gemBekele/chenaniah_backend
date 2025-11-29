@@ -15,7 +15,7 @@ import applicantRoutes from './routes/applicant.routes';
 import studentRoutes from './routes/student.routes';
 import adminTraineesRoutes from './routes/admin-trainees.routes';
 import resourcesRoutes from './routes/resources.routes';
-// import attendanceRoutes from './routes/attendance.routes';
+import attendanceRoutes from './routes/attendance.routes';
 
 // Handle BigInt serialization
 (BigInt.prototype as any).toJSON = function () {

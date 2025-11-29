@@ -346,24 +346,24 @@ router.put(
 );
 
 // Mark attendance
-// router.put(
-//   '/appointments/:appointment_id/attendance',
-//   tokenRequired,
-//   roleRequired(['coordinator', 'admin']),
-//   async (req: AuthRequest, res: Response) => {
-//     try {
-//       const appointmentId = parseInt(req.params.appointment_id);
-//       const { present } = req.body;
+router.put(
+  '/appointments/:appointment_id/attendance',
+  tokenRequired,
+  roleRequired(['coordinator', 'admin']),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const appointmentId = parseInt(req.params.appointment_id);
+      const { present } = req.body;
 
-//       await dbService.verifyApplicantCoordinator(appointmentId, present === true);
+      await dbService.verifyApplicantCoordinator(appointmentId, present === true);
 
-//       return res.json({ success: true, message: 'Attendance updated' });
-//     } catch (error: any) {
-//       console.error('Error updating attendance:', error);
-//       return res.status(500).json({ success: false, error: error.message });
-//     }
-//   }
-// );
+      return res.json({ success: true, message: 'Attendance updated' });
+    } catch (error: any) {
+      console.error('Error updating attendance:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
 
 // Approve applicant
 router.put(
