@@ -500,11 +500,32 @@ router.post('/student/forgot-password/verify', async (req: Request, res: Respons
     }
 
     const prisma = (await import('../db')).default;
-    const student = await prisma.student.findUnique({
+    // Use case-insensitive username lookup for PostgreSQL
+    // First try exact match, then try case-insensitive match
+    let student = await prisma.student.findUnique({
       where: { username },
     });
 
+    // If not found, try case-insensitive lookup using raw query
     if (!student) {
+      const students = await prisma.$queryRaw<Array<{id: number, username: string, phone: string}>>`
+        SELECT id, username, phone
+        FROM students
+        WHERE LOWER(username) = LOWER(${username})
+        LIMIT 1
+      `;
+      
+      if (students.length > 0) {
+        // Get the full student record with the actual username from DB
+        student = await prisma.student.findUnique({
+          where: { id: students[0].id },
+        });
+        console.log(`Found student with case-insensitive lookup: ${students[0].username} (requested: ${username})`);
+      }
+    }
+
+    if (!student) {
+      console.log(`Username not found: ${username}`);
       return res.status(404).json({ 
         success: false,
         error: 'Username not found' 
@@ -516,6 +537,7 @@ router.post('/student/forgot-password/verify', async (req: Request, res: Respons
     const providedPhoneDigits = phone.replace(/\D/g, '');
     
     if (studentPhoneDigits.length < 8 || providedPhoneDigits.length < 8) {
+      console.log(`Invalid phone format - student: ${studentPhoneDigits} (${studentPhoneDigits.length} digits), provided: ${providedPhoneDigits} (${providedPhoneDigits.length} digits)`);
       return res.status(400).json({ 
         success: false,
         error: 'Invalid phone number format' 
@@ -524,6 +546,8 @@ router.post('/student/forgot-password/verify', async (req: Request, res: Respons
 
     const studentLast8 = studentPhoneDigits.slice(-8);
     const providedLast8 = providedPhoneDigits.slice(-8);
+
+    console.log(`Phone comparison - student last 8: ${studentLast8}, provided last 8: ${providedLast8}, student full phone: ${student.phone}`);
 
     if (studentLast8 !== providedLast8) {
       return res.status(403).json({ 
