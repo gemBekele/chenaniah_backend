@@ -59,6 +59,13 @@ app.get('/api/v2/health', (req: Request, res: Response) => {
   });
 });
 
+app.get('/api/api/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // API Routes - mount under /api (legacy/backward compatibility)
 app.use('/api/auth', authRoutes);
 app.use('/api/submissions', submissionsRoutes);
@@ -86,6 +93,21 @@ app.use('/api/v2/admin/trainees', adminTraineesRoutes);
 app.use('/api/v2/resources', resourcesRoutes);
 app.use('/api/v2/admin/resources', resourcesRoutes);
 app.use('/api/v2/attendance', attendanceRoutes);
+
+// API Routes - mount under /api/api (for frontend using https://chenaniah.org/api/v2/api)
+// Nginx rewrites /api/v2/api/* to /api/api/*, so we need to handle these paths
+app.use('/api/api/auth', authRoutes);
+app.use('/api/api/submissions', submissionsRoutes);
+app.use('/api/api/schedule', scheduleRoutes);
+app.use('/api/api/stats', statsRoutes);
+app.use('/api/api/registration', registrationRoutes);
+app.use('/api/api/audio', audioRoutes);
+app.use('/api/api/applicant', applicantRoutes);
+app.use('/api/api/student', studentRoutes);
+app.use('/api/api/admin/trainees', adminTraineesRoutes);
+app.use('/api/api/resources', resourcesRoutes);
+app.use('/api/api/admin/resources', resourcesRoutes);
+app.use('/api/api/attendance', attendanceRoutes);
 
 // Serve uploaded files (assignments, payments, resources, student-documents)
 // This route must be before the 404 handler
