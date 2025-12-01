@@ -386,20 +386,20 @@ router.put(
 );
 
 // Get attendance appointments
-// router.get(
-//   '/appointments/attendance',
-//   tokenRequired,
-//   roleRequired(['coordinator', 'admin']),
-//   async (req: AuthRequest, res: Response) => {
-//     try {
-//       const appointments = await dbService.getVerifiedAppointments();
-//       return res.json({ success: true, appointments });
-//     } catch (error: any) {
-//       console.error('Error fetching appointments:', error);
-//       return res.status(500).json({ success: false, error: error.message });
-//     }
-//   }
-// );
+router.get(
+  '/appointments/attendance',
+  tokenRequired,
+  roleRequired(['coordinator', 'admin']),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const appointments = await dbService.getVerifiedAppointments();
+      return res.json({ success: true, appointments });
+    } catch (error: any) {
+      console.error('Error fetching appointments:', error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
 
 // Get appointments for evaluation
 router.get(

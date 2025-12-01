@@ -64,7 +64,7 @@ app.use('/api/student', studentRoutes);
 app.use('/api/admin/trainees', adminTraineesRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/admin/resources', resourcesRoutes);
-// app.use('/api/attendance', attendanceRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // Serve uploaded files (assignments, payments, resources, student-documents)
 // This route must be before the 404 handler

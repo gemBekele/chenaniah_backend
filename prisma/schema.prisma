@@ -162,16 +162,19 @@ model Student {
   essay                   String?   @db.Text
   appointmentId           Int?      @map("appointment_id")
   status                  String    @default("active") // active, inactive, graduated, dismissed
+  qrCode                  String?   @unique @map("qr_code") // Unique QR code identifier for attendance
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
   appointment             Appointment? @relation(fields: [appointmentId], references: [id])
   assignmentSubmissions   AssignmentSubmission[]
   payments                Payment[]
+  attendanceRecords       Attendance[]
 
   @@index([username], map: "idx_students_username")
   @@index([phone], map: "idx_students_phone")
   @@index([status], map: "idx_students_status")
+  @@index([qrCode], map: "idx_students_qr_code")
   @@map("students")
 }
 
@@ -230,5 +233,44 @@ model Payment {
   @@index([month], map: "idx_payments_month")
   @@index([status], map: "idx_payments_status")
   @@map("payments")
+}
+
+model Session {
+  id            Int       @id @default(autoincrement())
+  name          String    // Session name/description
+  date          DateTime  // Session date and time
+  location      String?   // Optional location
+  facilitatorId String?   @map("facilitator_id") // Username/ID of facilitator
+  status        String    @default("active") // active, completed, cancelled
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  attendanceRecords Attendance[]
+
+  @@index([date], map: "idx_sessions_date")
+  @@index([status], map: "idx_sessions_status")
+  @@map("sessions")
+}
+
+model Attendance {
+  id            Int       @id @default(autoincrement())
+  sessionId     Int       @map("session_id")
+  studentId     Int       @map("student_id")
+  scannedAt     DateTime  @default(now()) @map("scanned_at") // When QR was scanned
+  syncedAt      DateTime? @map("synced_at") // When record was synced to server (for offline mode)
+  isOffline     Boolean   @default(false) @map("is_offline") // Whether this was recorded offline
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  session       Session   @relation(fields: [sessionId], references: [id])
+  student       Student   @relation(fields: [studentId], references: [id])
+
+  @@unique([sessionId, studentId]) // One attendance record per student per session
+  @@index([sessionId], map: "idx_attendance_session_id")
+  @@index([studentId], map: "idx_attendance_student_id")
+  @@index([scannedAt], map: "idx_attendance_scanned_at")
+  @@index([isOffline], map: "idx_attendance_is_offline")
+  @@map("attendance")
 }
 
