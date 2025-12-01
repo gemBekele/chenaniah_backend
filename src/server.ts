@@ -44,7 +44,7 @@ app.use(
   })
 );
 
-// Health check endpoint
+// Health check endpoint - support both /api and /api/v2
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
@@ -52,7 +52,14 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// API Routes
+app.get('/api/v2/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// API Routes - mount under /api (legacy/backward compatibility)
 app.use('/api/auth', authRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/schedule', scheduleRoutes);
@@ -65,6 +72,20 @@ app.use('/api/admin/trainees', adminTraineesRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/admin/resources', resourcesRoutes);
 app.use('/api/attendance', attendanceRoutes);
+
+// API Routes - mount under /api/v2 (production frontend)
+app.use('/api/v2/auth', authRoutes);
+app.use('/api/v2/submissions', submissionsRoutes);
+app.use('/api/v2/schedule', scheduleRoutes);
+app.use('/api/v2/stats', statsRoutes);
+app.use('/api/v2/registration', registrationRoutes);
+app.use('/api/v2/audio', audioRoutes);
+app.use('/api/v2/applicant', applicantRoutes);
+app.use('/api/v2/student', studentRoutes);
+app.use('/api/v2/admin/trainees', adminTraineesRoutes);
+app.use('/api/v2/resources', resourcesRoutes);
+app.use('/api/v2/admin/resources', resourcesRoutes);
+app.use('/api/v2/attendance', attendanceRoutes);
 
 // Serve uploaded files (assignments, payments, resources, student-documents)
 // This route must be before the 404 handler
