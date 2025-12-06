@@ -16,6 +16,7 @@ import studentRoutes from './routes/student.routes';
 import adminTraineesRoutes from './routes/admin-trainees.routes';
 import resourcesRoutes from './routes/resources.routes';
 import attendanceRoutes from './routes/attendance.routes';
+import noticeRoutes from './routes/notice.routes';
 
 // Handle BigInt serialization
 (BigInt.prototype as any).toJSON = function () {
@@ -79,6 +80,8 @@ app.use('/api/admin/trainees', adminTraineesRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/admin/resources', resourcesRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/notices', noticeRoutes);
+app.use('/api/admin/notices', noticeRoutes);
 
 // API Routes - mount under /api/v2 (production frontend)
 app.use('/api/v2/auth', authRoutes);
@@ -93,6 +96,8 @@ app.use('/api/v2/admin/trainees', adminTraineesRoutes);
 app.use('/api/v2/resources', resourcesRoutes);
 app.use('/api/v2/admin/resources', resourcesRoutes);
 app.use('/api/v2/attendance', attendanceRoutes);
+app.use('/api/v2/notices', noticeRoutes);
+app.use('/api/v2/admin/notices', noticeRoutes);
 
 // API Routes - mount under /api/api (for frontend using https://chenaniah.org/api/v2/api)
 // Nginx rewrites /api/v2/api/* to /api/api/*, so we need to handle these paths
@@ -108,6 +113,8 @@ app.use('/api/api/admin/trainees', adminTraineesRoutes);
 app.use('/api/api/resources', resourcesRoutes);
 app.use('/api/api/admin/resources', resourcesRoutes);
 app.use('/api/api/attendance', attendanceRoutes);
+app.use('/api/api/notices', noticeRoutes);
+app.use('/api/api/admin/notices', noticeRoutes);
 
 // Serve uploaded files (assignments, payments, resources, student-documents)
 // This route must be before the 404 handler

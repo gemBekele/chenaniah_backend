@@ -53,10 +53,12 @@ router.post('/coordinator/login', (req: Request, res: Response) => {
 
   const { username, password } = req.body;
 
-  if (
-    username === config.auth.coordinatorUsername &&
-    password === config.auth.coordinatorPassword
-  ) {
+  // Check against all coordinator accounts
+  const coordinator = config.auth.coordinators.find(
+    (coord) => coord.username === username && coord.password === password
+  );
+
+  if (coordinator) {
     const token = jwt.sign(
       {
         username,

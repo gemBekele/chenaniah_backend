@@ -274,3 +274,16 @@ model Attendance {
   @@map("attendance")
 }
 
+model Notice {
+  id        Int       @id @default(autoincrement())
+  title     String
+  content   String    @db.Text
+  type      String    @default("info") // info, warning, success, urgent
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([active], map: "idx_notices_active")
+  @@index([createdAt], map: "idx_notices_created_at")
+  @@map("notices")
+}
