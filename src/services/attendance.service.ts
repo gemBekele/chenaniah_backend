@@ -205,6 +205,7 @@ export class AttendanceService {
   }>) {
     const results = [];
     const errors = [];
+    const alreadyRecorded = [];
 
     for (const record of records) {
       try {
@@ -216,6 +217,55 @@ export class AttendanceService {
         });
         results.push(attendance);
       } catch (error: any) {
+        // If attendance is already recorded, treat it as success
+        // since the record exists in the database
+        if (error.message.includes('already recorded')) {
+          // Find the existing attendance record
+          const student = await prisma.student.findUnique({
+            where: { qrCode: record.qrCode },
+          });
+          
+          if (student) {
+            const existing = await prisma.attendance.findUnique({
+              where: {
+                sessionId_studentId: {
+                  sessionId: record.sessionId,
+                  studentId: student.id,
+                },
+              },
+              include: {
+                student: {
+                  select: {
+                    id: true,
+                    fullNameEnglish: true,
+                    fullNameAmharic: true,
+                    username: true,
+                  },
+                },
+              },
+            });
+            
+            if (existing) {
+              // Update offline record to synced if it was offline
+              if (existing.isOffline) {
+                await prisma.attendance.update({
+                  where: { id: existing.id },
+                  data: {
+                    isOffline: false,
+                    syncedAt: new Date(),
+                  },
+                });
+              }
+              results.push(existing);
+              alreadyRecorded.push({
+                qrCode: record.qrCode,
+                message: 'Attendance already recorded',
+              });
+              continue;
+            }
+          }
+        }
+        
         errors.push({
           qrCode: record.qrCode,
           error: error.message,
@@ -228,6 +278,7 @@ export class AttendanceService {
       failed: errors.length,
       results,
       errors,
+      alreadyRecorded,
     };
   }
 

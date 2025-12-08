@@ -49,12 +49,8 @@ async function main() {
   
   // Target phone numbers (using last 8 digits)
   const targetPhones = [
-    '0925100041',
-    '0970642282',
-    '0904544617',
-    '0973105050',
-    '0934234973',
-    '0921789381'
+    '0939484817',
+    
   ];
   
   // Extract last 8 digits from target phones
@@ -93,8 +89,17 @@ async function main() {
   console.log(`\n📥 Generating and saving QR codes to ${OUTPUT_DIR}/...`);
   
   for (const student of selected) {
-    // Generate QR code string if not exists
-    const qrCodeString = student.qrCode || `STUDENT-${student.id}-${Date.now()}`;
+    // Use QR code from database if available
+    let qrCodeString = student.qrCode;
+    
+    if (!qrCodeString) {
+      console.warn(`   ⚠️  WARNING: Student ${student.fullNameEnglish || student.username} (ID: ${student.id}) does not have a QR code in the database!`);
+      console.warn(`   ⚠️  Generating temporary QR code - this will NOT work for attendance scanning.`);
+      console.warn(`   ⚠️  The student needs to log in to generate their QR code via the API.`);
+      qrCodeString = `STUDENT-${student.id}-${Date.now()}`;
+    } else {
+      console.log(`   📋 Using QR code from database: ${qrCodeString}`);
+    }
     
     // Get last 8 digits of phone number
     const phoneStr = String(student.phone || '');
@@ -112,6 +117,9 @@ async function main() {
         margin: 1,
       });
       console.log(`   ✅ Saved: ${filename} (${student.fullNameEnglish || student.username})`);
+      if (student.qrCode) {
+        console.log(`   ✅ QR code value: ${qrCodeString}`);
+      }
     } catch (err) {
       console.error(`   ❌ Failed to generate QR for ${student.username}:`, err.message);
     }

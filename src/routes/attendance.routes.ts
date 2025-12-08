@@ -252,9 +252,11 @@ router.post('/sync', tokenRequired, async (req: AuthRequest, res: Response) => {
     return res.json({
       success: true,
       successCount: result.success,
+      success: result.success, // Also include as 'success' for compatibility
       failed: result.failed,
       results: result.results,
       errors: result.errors,
+      alreadyRecorded: result.alreadyRecorded || [],
     });
   } catch (error: any) {
     console.error('Sync attendance error:', error);
