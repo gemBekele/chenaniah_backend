@@ -1,8 +1,3 @@
-// ATTENDANCE ROUTES - TEMPORARILY COMMENTED OUT
-// This file is disabled to prevent TypeScript compilation errors
-// Uncomment when attendance functionality is ready
-
-/*
 import { Router, Request, Response } from 'express';
 import QRCode from 'qrcode';
 import { config } from '../config';
@@ -334,10 +329,4 @@ router.put('/sessions/:id/status', tokenRequired, async (req: AuthRequest, res: 
   }
 });
 
-export default router;
-*/
-
-// Export empty router to prevent import errors
-import { Router } from 'express';
-const router = Router();
 export default router;

@@ -156,3 +156,5 @@ echo "  - Restart backend: pm2 restart chenaniah-api-v2"
 echo "  - Restart frontend: pm2 restart chenaniah-web"
 echo ""
 
+
+

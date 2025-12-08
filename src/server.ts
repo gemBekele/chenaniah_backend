@@ -15,7 +15,8 @@ import applicantRoutes from './routes/applicant.routes';
 import studentRoutes from './routes/student.routes';
 import adminTraineesRoutes from './routes/admin-trainees.routes';
 import resourcesRoutes from './routes/resources.routes';
-// import attendanceRoutes from './routes/attendance.routes';
+import attendanceRoutes from './routes/attendance.routes';
+import noticeRoutes from './routes/notice.routes';
 
 // Handle BigInt serialization
 (BigInt.prototype as any).toJSON = function () {
@@ -44,7 +45,7 @@ app.use(
   })
 );
 
-// Health check endpoint
+// Health check endpoint - support both /api and /api/v2
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
@@ -52,7 +53,21 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
-// API Routes
+app.get('/api/v2/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api/api/health', (req: Request, res: Response) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// API Routes - mount under /api (legacy/backward compatibility)
 app.use('/api/auth', authRoutes);
 app.use('/api/submissions', submissionsRoutes);
 app.use('/api/schedule', scheduleRoutes);
@@ -64,7 +79,42 @@ app.use('/api/student', studentRoutes);
 app.use('/api/admin/trainees', adminTraineesRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/admin/resources', resourcesRoutes);
-// app.use('/api/attendance', attendanceRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/notices', noticeRoutes);
+app.use('/api/admin/notices', noticeRoutes);
+
+// API Routes - mount under /api/v2 (production frontend)
+app.use('/api/v2/auth', authRoutes);
+app.use('/api/v2/submissions', submissionsRoutes);
+app.use('/api/v2/schedule', scheduleRoutes);
+app.use('/api/v2/stats', statsRoutes);
+app.use('/api/v2/registration', registrationRoutes);
+app.use('/api/v2/audio', audioRoutes);
+app.use('/api/v2/applicant', applicantRoutes);
+app.use('/api/v2/student', studentRoutes);
+app.use('/api/v2/admin/trainees', adminTraineesRoutes);
+app.use('/api/v2/resources', resourcesRoutes);
+app.use('/api/v2/admin/resources', resourcesRoutes);
+app.use('/api/v2/attendance', attendanceRoutes);
+app.use('/api/v2/notices', noticeRoutes);
+app.use('/api/v2/admin/notices', noticeRoutes);
+
+// API Routes - mount under /api/api (for frontend using https://chenaniah.org/api/v2/api)
+// Nginx rewrites /api/v2/api/* to /api/api/*, so we need to handle these paths
+app.use('/api/api/auth', authRoutes);
+app.use('/api/api/submissions', submissionsRoutes);
+app.use('/api/api/schedule', scheduleRoutes);
+app.use('/api/api/stats', statsRoutes);
+app.use('/api/api/registration', registrationRoutes);
+app.use('/api/api/audio', audioRoutes);
+app.use('/api/api/applicant', applicantRoutes);
+app.use('/api/api/student', studentRoutes);
+app.use('/api/api/admin/trainees', adminTraineesRoutes);
+app.use('/api/api/resources', resourcesRoutes);
+app.use('/api/api/admin/resources', resourcesRoutes);
+app.use('/api/api/attendance', attendanceRoutes);
+app.use('/api/api/notices', noticeRoutes);
+app.use('/api/api/admin/notices', noticeRoutes);
 
 // Serve uploaded files (assignments, payments, resources, student-documents)
 // This route must be before the 404 handler
