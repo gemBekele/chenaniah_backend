@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { config } from '../config';
+import prisma from '../db';
 import { tokenRequired, AuthRequest } from '../middleware/auth';
 import { studentService } from '../services/student.service';
 import { assignmentService } from '../services/assignment.service';
@@ -197,6 +198,35 @@ router.get('/assignments', tokenRequired, async (req: AuthRequest, res: Response
   }
 });
 
+// Get sessions that allow assignment uploads
+router.get('/assignment-sessions', tokenRequired, async (req: AuthRequest, res: Response) => {
+  addCorsHeaders(res, req);
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  try {
+    const sessions = await prisma.session.findMany({
+      where: { status: { in: ['active', 'completed'] } },
+      orderBy: { date: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        date: true,
+      },
+    });
+
+    return res.json({
+      success: true,
+      sessions,
+    });
+  } catch (error: any) {
+    console.error('Error getting assignment sessions:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
 // Submit assignment
 router.post('/submit-assignment', tokenRequired, upload.single('file'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
@@ -211,10 +241,21 @@ router.post('/submit-assignment', tokenRequired, upload.single('file'), async (r
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    const { assignmentId, text } = req.body;
+    const { assignmentId, sessionId, text } = req.body;
 
-    if (!assignmentId) {
-      return res.status(400).json({ error: 'Assignment ID is required' });
+    const parsedAssignmentId = assignmentId ? parseInt(assignmentId) : undefined;
+    const parsedSessionId = sessionId ? parseInt(sessionId) : undefined;
+
+    if (!parsedAssignmentId && !parsedSessionId) {
+      return res.status(400).json({ error: 'Assignment ID or session ID is required' });
+    }
+
+    if (parsedAssignmentId !== undefined && isNaN(parsedAssignmentId)) {
+      return res.status(400).json({ error: 'Invalid assignment ID' });
+    }
+
+    if (parsedSessionId !== undefined && isNaN(parsedSessionId)) {
+      return res.status(400).json({ error: 'Invalid session ID' });
     }
 
     let filePath: string | undefined;
@@ -222,9 +263,19 @@ router.post('/submit-assignment', tokenRequired, upload.single('file'), async (r
       filePath = await assignmentService.saveSubmissionFile(req.file);
     }
 
+    let targetAssignmentId = parsedAssignmentId;
+    if (!targetAssignmentId && parsedSessionId) {
+      const assignment = await assignmentService.getOrCreateSessionAssignment(parsedSessionId);
+      targetAssignmentId = assignment.id;
+    }
+
+    if (!targetAssignmentId) {
+      return res.status(400).json({ error: 'Unable to resolve assignment' });
+    }
+
     await assignmentService.submitAssignment({
       studentId: userId,
-      assignmentId: parseInt(assignmentId),
+      assignmentId: targetAssignmentId,
       filePath,
       text,
     });

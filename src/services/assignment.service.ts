@@ -7,13 +7,15 @@ export class AssignmentService {
   async createAssignment(data: {
     title: string;
     description?: string;
-    dueDate: Date;
+    dueDate?: Date;
+    sessionId?: number;
   }) {
     return prisma.assignment.create({
       data: {
         title: data.title,
         description: data.description,
-        dueDate: data.dueDate,
+        dueDate: data.dueDate || new Date(),
+        sessionId: data.sessionId,
       },
     });
   }
@@ -21,6 +23,13 @@ export class AssignmentService {
   async getAllAssignments() {
     return prisma.assignment.findMany({
       include: {
+        session: {
+          select: {
+            id: true,
+            name: true,
+            date: true,
+          },
+        },
         _count: {
           select: {
             submissions: true,
@@ -35,6 +44,13 @@ export class AssignmentService {
     return prisma.assignment.findUnique({
       where: { id },
       include: {
+        session: {
+          select: {
+            id: true,
+            name: true,
+            date: true,
+          },
+        },
         submissions: {
           include: {
             student: {
@@ -53,6 +69,15 @@ export class AssignmentService {
 
   async getStudentAssignments(studentId: number) {
     const assignments = await prisma.assignment.findMany({
+      include: {
+        session: {
+          select: {
+            id: true,
+            name: true,
+            date: true,
+          },
+        },
+      },
       orderBy: { dueDate: 'asc' },
     });
 
@@ -72,7 +97,35 @@ export class AssignmentService {
         submittedAt: submission?.submittedAt,
         grade: submission?.grade,
         feedback: submission?.feedback,
+        session: assignment.session,
       };
+    });
+  }
+
+  async getOrCreateSessionAssignment(sessionId: number) {
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    const existing = await prisma.assignment.findFirst({
+      where: { sessionId },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return prisma.assignment.create({
+      data: {
+        title: session.name ? `${session.name} Assignment` : `Session ${session.id} Assignment`,
+        description: 'Auto-created from student upload',
+        dueDate: session.date,
+        sessionId: session.id,
+      },
     });
   }
 

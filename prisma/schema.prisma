@@ -11,23 +11,23 @@ datasource db {
 }
 
 model User {
-  userId          BigInt    @id @map("user_id")
-  username        String?   @map("username")
-  firstName       String?   @map("first_name")
-  lastName        String?   @map("last_name")
-  state           String    @default("idle") @map("state")
-  name            String?   @map("name")
-  address         String?   @map("address")
-  phone           String?   @map("phone")
-  church          String?   @map("church")
-  audioFileId     String?   @map("audio_file_id")
-  audioDriveLink  String?   @map("audio_drive_link")
-  audioFilePath   String?   @map("audio_file_path")
-  fileSize        BigInt?   @map("file_size")
-  audioDuration   Float?    @map("audio_duration")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  submissionCount BigInt    @default(0) @map("submission_count")
+  userId           BigInt    @id @map("user_id")
+  username         String?   @map("username")
+  firstName        String?   @map("first_name")
+  lastName         String?   @map("last_name")
+  state            String    @default("idle") @map("state")
+  name             String?   @map("name")
+  address          String?   @map("address")
+  phone            String?   @map("phone")
+  church           String?   @map("church")
+  audioFileId      String?   @map("audio_file_id")
+  audioDriveLink   String?   @map("audio_drive_link")
+  audioFilePath    String?   @map("audio_file_path")
+  fileSize         BigInt?   @map("file_size")
+  audioDuration    Float?    @map("audio_duration")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  submissionCount  BigInt    @default(0) @map("submission_count")
   lastSubmissionAt DateTime? @map("last_submission_at")
 
   submissions Submission[]
@@ -98,25 +98,25 @@ model TimeSlot {
 }
 
 model Appointment {
-  id                      Int       @id @default(autoincrement())
-  applicantName           String    @map("applicant_name")
-  applicantEmail          String    @map("applicant_email")
-  applicantPhone          String    @map("applicant_phone")
-  scheduledDate           String    @map("scheduled_date")
-  scheduledTime           String    @map("scheduled_time")
-  status                  String    @default("scheduled")
-  notes                   String?
-  selectedSong            String?   @map("selected_song")
-  additionalSong          String?   @map("additional_song")
-  additionalSongSinger    String?   @map("additional_song_singer")
-  coordinatorVerified     Boolean   @default(false) @map("coordinator_verified")
-  coordinatorVerifiedAt   DateTime? @map("coordinator_verified_at")
-  coordinatorApproved     Boolean   @default(false) @map("coordinator_approved")
-  coordinatorApprovedAt   DateTime? @map("coordinator_approved_at")
-  finalDecision           String?   @map("final_decision")
-  decisionMadeAt          DateTime? @map("decision_made_at")
-  createdAt               DateTime  @default(now()) @map("created_at")
-  updatedAt               DateTime  @updatedAt @map("updated_at")
+  id                    Int       @id @default(autoincrement())
+  applicantName         String    @map("applicant_name")
+  applicantEmail        String    @map("applicant_email")
+  applicantPhone        String    @map("applicant_phone")
+  scheduledDate         String    @map("scheduled_date")
+  scheduledTime         String    @map("scheduled_time")
+  status                String    @default("scheduled")
+  notes                 String?
+  selectedSong          String?   @map("selected_song")
+  additionalSong        String?   @map("additional_song")
+  additionalSongSinger  String?   @map("additional_song_singer")
+  coordinatorVerified   Boolean   @default(false) @map("coordinator_verified")
+  coordinatorVerifiedAt DateTime? @map("coordinator_verified_at")
+  coordinatorApproved   Boolean   @default(false) @map("coordinator_approved")
+  coordinatorApprovedAt DateTime? @map("coordinator_approved_at")
+  finalDecision         String?   @map("final_decision")
+  decisionMadeAt        DateTime? @map("decision_made_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   evaluations InterviewEvaluation[]
   students    Student[]
@@ -128,14 +128,14 @@ model Appointment {
 }
 
 model InterviewEvaluation {
-  id           Int      @id @default(autoincrement())
-  appointmentId Int     @map("appointment_id")
-  judgeName    String   @map("judge_name")
-  criteriaName String   @map("criteria_name")
-  rating       Int
-  comments     String?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  appointmentId Int      @map("appointment_id")
+  judgeName     String   @map("judge_name")
+  criteriaName  String   @map("criteria_name")
+  rating        Int
+  comments      String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 
@@ -146,30 +146,34 @@ model InterviewEvaluation {
 }
 
 model Student {
-  id                      Int       @id @default(autoincrement())
-  username                String    @unique
-  passwordHash            String    @map("password_hash")
-  fullNameAmharic         String?   @map("full_name_amharic")
-  fullNameEnglish         String?   @map("full_name_english")
-  gender                  String?   @map("gender") // male, female
-  localChurch             String?   @map("local_church")
-  address                 String?   @db.Text
-  phone                   String    @unique
-  photoPath               String?   @map("photo_path")
-  profileComplete         Boolean   @default(false) @map("profile_complete")
-  idDocumentPath          String?   @map("id_document_path")
+  id                       Int      @id @default(autoincrement())
+  username                 String   @unique
+  passwordHash             String   @map("password_hash")
+  fullNameAmharic          String?  @map("full_name_amharic")
+  fullNameEnglish          String?  @map("full_name_english")
+  gender                   String?  @map("gender") // male, female
+  localChurch              String?  @map("local_church")
+  address                  String?  @db.Text
+  phone                    String   @unique
+  photoPath                String?  @map("photo_path")
+  profileComplete          Boolean  @default(false) @map("profile_complete")
+  idDocumentPath           String?  @map("id_document_path")
   recommendationLetterPath String?  @map("recommendation_letter_path")
-  essay                   String?   @db.Text
-  appointmentId           Int?      @map("appointment_id")
-  status                  String    @default("active") // active, inactive, graduated, dismissed
-  qrCode                  String?   @unique @map("qr_code") // Unique QR code identifier for attendance
-  createdAt               DateTime  @default(now()) @map("created_at")
-  updatedAt               DateTime  @updatedAt @map("updated_at")
+  essay                    String?  @db.Text
+  appointmentId            Int?     @map("appointment_id")
+  status                   String   @default("active") // active, inactive, graduated, dismissed
+  qrCode                   String?  @unique @map("qr_code") // Unique QR code identifier for attendance
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
-  appointment             Appointment? @relation(fields: [appointmentId], references: [id])
-  assignmentSubmissions   AssignmentSubmission[]
-  payments                Payment[]
-  attendanceRecords       Attendance[]
+  appointment           Appointment?           @relation(fields: [appointmentId], references: [id])
+  assignmentSubmissions AssignmentSubmission[]
+  payments              Payment[]
+  attendanceRecords     Attendance[]
+  notes                 Note[]
+  teamMemberships       TeamMembership[]
+  prayerSlots           PrayerSlot[]
+  personalNotices       Notice[]
 
   @@index([username], map: "idx_students_username")
   @@index([phone], map: "idx_students_phone")
@@ -179,33 +183,36 @@ model Student {
 }
 
 model Assignment {
-  id          Int       @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   title       String
-  description String?   @db.Text
-  dueDate     DateTime  @map("due_date")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  description String?  @db.Text
+  dueDate     DateTime @map("due_date")
+  sessionId   Int?     @map("session_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
+  session     Session?               @relation(fields: [sessionId], references: [id])
   submissions AssignmentSubmission[]
 
   @@index([dueDate], map: "idx_assignments_due_date")
+  @@index([sessionId], map: "idx_assignments_session_id")
   @@map("assignments")
 }
 
 model AssignmentSubmission {
-  id          Int       @id @default(autoincrement())
-  studentId   Int       @map("student_id")
-  assignmentId Int      @map("assignment_id")
-  filePath    String?   @map("file_path")
-  text        String?   @db.Text
-  grade       Int?      // 0-100
-  feedback    String?   @db.Text
-  submittedAt DateTime  @default(now()) @map("submitted_at")
-  gradedAt    DateTime? @map("graded_at")
-  gradedBy    String?   @map("graded_by")
+  id           Int       @id @default(autoincrement())
+  studentId    Int       @map("student_id")
+  assignmentId Int       @map("assignment_id")
+  filePath     String?   @map("file_path")
+  text         String?   @db.Text
+  grade        Int? // 0-100
+  feedback     String?   @db.Text
+  submittedAt  DateTime  @default(now()) @map("submitted_at")
+  gradedAt     DateTime? @map("graded_at")
+  gradedBy     String?   @map("graded_by")
 
-  student     Student   @relation(fields: [studentId], references: [id])
-  assignment  Assignment @relation(fields: [assignmentId], references: [id])
+  student    Student    @relation(fields: [studentId], references: [id])
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
 
   @@unique([studentId, assignmentId])
   @@index([studentId], map: "idx_assignment_submissions_student_id")
@@ -215,18 +222,18 @@ model AssignmentSubmission {
 }
 
 model Payment {
-  id            Int       @id @default(autoincrement())
-  studentId     Int       @map("student_id")
-  amount        Float
-  month         String    // Format: "YYYY-MM"
-  status        String    @default("pending") // pending, paid, overdue
-  paidAt        DateTime? @map("paid_at")
-  notes         String?   @db.Text
-  depositSlipPath String? @map("deposit_slip_path")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id              Int       @id @default(autoincrement())
+  studentId       Int       @map("student_id")
+  amount          Float
+  month           String // Format: "YYYY-MM"
+  status          String    @default("pending") // pending, paid, overdue
+  paidAt          DateTime? @map("paid_at")
+  notes           String?   @db.Text
+  depositSlipPath String?   @map("deposit_slip_path")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  student       Student   @relation(fields: [studentId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
 
   @@unique([studentId, month])
   @@index([studentId], map: "idx_payments_student_id")
@@ -236,16 +243,18 @@ model Payment {
 }
 
 model Session {
-  id            Int       @id @default(autoincrement())
-  name          String    // Session name/description
-  date          DateTime  // Session date and time
-  location      String?   // Optional location
-  facilitatorId String?   @map("facilitator_id") // Username/ID of facilitator
-  status        String    @default("active") // active, completed, cancelled
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  name          String // Session name/description
+  date          DateTime // Session date and time
+  location      String? // Optional location
+  facilitatorId String?  @map("facilitator_id") // Username/ID of facilitator
+  status        String   @default("active") // active, completed, cancelled
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   attendanceRecords Attendance[]
+  notes             Note[]
+  assignments       Assignment[]
 
   @@index([date], map: "idx_sessions_date")
   @@index([status], map: "idx_sessions_status")
@@ -253,18 +262,18 @@ model Session {
 }
 
 model Attendance {
-  id            Int       @id @default(autoincrement())
-  sessionId     Int       @map("session_id")
-  studentId     Int       @map("student_id")
-  scannedAt     DateTime  @default(now()) @map("scanned_at") // When QR was scanned
-  syncedAt      DateTime? @map("synced_at") // When record was synced to server (for offline mode)
-  isOffline     Boolean   @default(false) @map("is_offline") // Whether this was recorded offline
-  notes         String?   @db.Text
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id        Int       @id @default(autoincrement())
+  sessionId Int       @map("session_id")
+  studentId Int       @map("student_id")
+  scannedAt DateTime  @default(now()) @map("scanned_at") // When QR was scanned
+  syncedAt  DateTime? @map("synced_at") // When record was synced to server (for offline mode)
+  isOffline Boolean   @default(false) @map("is_offline") // Whether this was recorded offline
+  notes     String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  session       Session   @relation(fields: [sessionId], references: [id])
-  student       Student   @relation(fields: [studentId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
 
   @@unique([sessionId, studentId]) // One attendance record per student per session
   @@index([sessionId], map: "idx_attendance_session_id")
@@ -275,15 +284,104 @@ model Attendance {
 }
 
 model Notice {
-  id        Int       @id @default(autoincrement())
-  title     String
-  content   String    @db.Text
-  type      String    @default("info") // info, warning, success, urgent
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  title           String
+  content         String   @db.Text
+  type            String   @default("info") // info, warning, success, urgent
+  active          Boolean  @default(true)
+  targetStudentId Int?     @map("target_student_id") // If set, personal notice for specific student
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  targetStudent Student? @relation(fields: [targetStudentId], references: [id])
 
   @@index([active], map: "idx_notices_active")
   @@index([createdAt], map: "idx_notices_created_at")
+  @@index([targetStudentId], map: "idx_notices_target_student")
   @@map("notices")
+}
+
+// Notes - attached to sessions, created by students or admin
+model Note {
+  id         Int      @id @default(autoincrement())
+  content    String?  @db.Text // Text content (for text notes)
+  imagePath  String?  @map("image_path") // Path to uploaded image
+  type       String   @default("text") // "text" or "image"
+  sessionId  Int      @map("session_id") // Related session from attendance
+  authorId   Int?     @map("author_id") // Student ID (null for admin)
+  authorType String   @map("author_type") // "student" or "admin"
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  session Session  @relation(fields: [sessionId], references: [id])
+  student Student? @relation(fields: [authorId], references: [id])
+
+  @@index([sessionId], map: "idx_notes_session_id")
+  @@index([authorId], map: "idx_notes_author_id")
+  @@map("notes")
+}
+
+// Teams - created by admin, students can join multiple teams
+model Team {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?  @db.Text
+  color       String   @default("#3B82F6") // Hex color code for team
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  memberships TeamMembership[]
+  notices     TeamNotice[]
+
+  @@map("teams")
+}
+
+// Team memberships - many-to-many between students and teams
+model TeamMembership {
+  id         Int      @id @default(autoincrement())
+  teamId     Int      @map("team_id")
+  studentId  Int      @map("student_id")
+  joinReason String   @map("join_reason") @db.Text // Why they want to join
+  joinedAt   DateTime @default(now()) @map("joined_at")
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, studentId])
+  @@index([teamId], map: "idx_team_memberships_team_id")
+  @@index([studentId], map: "idx_team_memberships_student_id")
+  @@map("team_memberships")
+}
+
+// Team notices - notice board per team
+model TeamNotice {
+  id        Int      @id @default(autoincrement())
+  teamId    Int      @map("team_id")
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId], map: "idx_team_notices_team_id")
+  @@index([createdAt], map: "idx_team_notices_created_at")
+  @@map("team_notices")
+}
+
+// Chain Prayer slots - 15-minute intervals throughout the week
+model PrayerSlot {
+  id          Int       @id @default(autoincrement())
+  dayOfWeek   Int       @map("day_of_week") // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime   String    @map("start_time") // "HH:MM" format (e.g., "09:00", "09:15")
+  claimedById Int?      @map("claimed_by_id")
+  claimedAt   DateTime? @map("claimed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  claimedBy Student? @relation(fields: [claimedById], references: [id])
+
+  @@unique([dayOfWeek, startTime])
+  @@index([claimedById], map: "idx_prayer_slots_claimed_by")
+  @@map("prayer_slots")
 }
