@@ -228,7 +228,7 @@ router.get('/assignment-sessions', tokenRequired, async (req: AuthRequest, res: 
 });
 
 // Submit assignment
-router.post('/submit-assignment', tokenRequired, upload.single('file'), async (req: AuthRequest, res: Response) => {
+router.post('/submit-assignment', tokenRequired, upload.array('files', 3), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -258,9 +258,9 @@ router.post('/submit-assignment', tokenRequired, upload.single('file'), async (r
       return res.status(400).json({ error: 'Invalid session ID' });
     }
 
-    let filePath: string | undefined;
-    if (req.file) {
-      filePath = await assignmentService.saveSubmissionFile(req.file);
+    let filePaths: string[] = [];
+    if (req.files && (req.files as Express.Multer.File[]).length > 0) {
+      filePaths = await assignmentService.saveSubmissionFiles(req.files as Express.Multer.File[]);
     }
 
     let targetAssignmentId = parsedAssignmentId;
@@ -276,7 +276,7 @@ router.post('/submit-assignment', tokenRequired, upload.single('file'), async (r
     await assignmentService.submitAssignment({
       studentId: userId,
       assignmentId: targetAssignmentId,
-      filePath,
+      filePaths: filePaths.length > 0 ? filePaths : undefined,
       text,
     });
 
