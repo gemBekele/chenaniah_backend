@@ -132,7 +132,7 @@ export class AssignmentService {
   async submitAssignment(data: {
     studentId: number;
     assignmentId: number;
-    filePath?: string;
+    filePaths?: string[];
     text?: string;
   }) {
     // Check if already submitted
@@ -150,7 +150,7 @@ export class AssignmentService {
       return prisma.assignmentSubmission.update({
         where: { id: existing.id },
         data: {
-          filePath: data.filePath || existing.filePath,
+          filePaths: data.filePaths || existing.filePaths,
           text: data.text || existing.text,
           submittedAt: new Date(),
         },
@@ -162,7 +162,7 @@ export class AssignmentService {
       data: {
         studentId: data.studentId,
         assignmentId: data.assignmentId,
-        filePath: data.filePath,
+        filePaths: data.filePaths || [],
         text: data.text,
       },
     });
@@ -187,20 +187,25 @@ export class AssignmentService {
     });
   }
 
-  async saveSubmissionFile(file: Express.Multer.File): Promise<string> {
+  async saveSubmissionFiles(files: Express.Multer.File[]): Promise<string[]> {
     const uploadsDir = path.join(process.cwd(), 'uploads', 'assignments');
     
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    const ext = path.extname(file.originalname);
-    const filename = `assignment-${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
-    const filepath = path.join(uploadsDir, filename);
+    const savedPaths: string[] = [];
 
-    fs.writeFileSync(filepath, file.buffer);
+    for (const file of files) {
+      const ext = path.extname(file.originalname);
+      const filename = `assignment-${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
+      const filepath = path.join(uploadsDir, filename);
 
-    return `uploads/assignments/${filename}`;
+      fs.writeFileSync(filepath, file.buffer);
+      savedPaths.push(`uploads/assignments/${filename}`);
+    }
+
+    return savedPaths;
   }
 }
 

@@ -203,7 +203,7 @@ model AssignmentSubmission {
   id           Int       @id @default(autoincrement())
   studentId    Int       @map("student_id")
   assignmentId Int       @map("assignment_id")
-  filePath     String?   @map("file_path")
+  filePaths    String[]  @map("file_paths")
   text         String?   @db.Text
   grade        Int? // 0-100
   feedback     String?   @db.Text
