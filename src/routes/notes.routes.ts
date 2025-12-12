@@ -56,6 +56,8 @@ router.get('/session/:sessionId', tokenRequired, async (req: AuthRequest, res: R
 
   try {
     const sessionId = parseInt(req.params.sessionId);
+    const userId = (req.user as any)?.userId;
+    const userRole = (req.user as any)?.role;
 
     // Verify session exists
     const session = await prisma.session.findUnique({
@@ -66,8 +68,17 @@ router.get('/session/:sessionId', tokenRequired, async (req: AuthRequest, res: R
       return res.status(404).json({ error: 'Session not found' });
     }
 
+    // Determine if user is admin
+    const isAdmin = userRole === 'coordinator' || userRole === 'admin';
+
+    // Build where clause: admins see all notes, students only see their own
+    const where: any = { sessionId };
+    if (!isAdmin) {
+      where.authorId = userId;
+    }
+
     const notes = await prisma.note.findMany({
-      where: { sessionId },
+      where,
       include: {
         student: {
           select: {
@@ -172,6 +183,11 @@ router.get('/sessions', tokenRequired, async (req: AuthRequest, res: Response) =
   }
 
   try {
+    const userId = (req.user as any)?.userId;
+    const userRole = (req.user as any)?.role;
+    const isAdmin = userRole === 'coordinator' || userRole === 'admin';
+
+    // Get all active/completed sessions
     const sessions = await prisma.session.findMany({
       where: { status: { in: ['active', 'completed'] } },
       orderBy: { date: 'desc' },
@@ -179,20 +195,31 @@ router.get('/sessions', tokenRequired, async (req: AuthRequest, res: Response) =
         id: true,
         name: true,
         date: true,
-        _count: {
-          select: { notes: true },
-        },
       },
     });
 
+    // Get note counts for each session, filtered by user
+    const sessionsWithCounts = await Promise.all(
+      sessions.map(async (session) => {
+        const noteCount = await prisma.note.count({
+          where: {
+            sessionId: session.id,
+            ...(isAdmin ? {} : { authorId: userId }),
+          },
+        });
+
+        return {
+          id: session.id,
+          name: session.name,
+          date: session.date,
+          notesCount: noteCount,
+        };
+      })
+    );
+
     return res.json({
       success: true,
-      sessions: sessions.map((s) => ({
-        id: s.id,
-        name: s.name,
-        date: s.date,
-        notesCount: s._count.notes,
-      })),
+      sessions: sessionsWithCounts,
     });
   } catch (error: any) {
     console.error('Error fetching sessions for notes:', error);
