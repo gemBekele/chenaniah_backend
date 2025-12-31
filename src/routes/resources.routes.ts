@@ -44,6 +44,7 @@ let resources: Array<{
   fileName?: string;
   fileSize?: number;
   createdAt: string;
+  batchId?: string;
 }> = [];
 
 let nextResourceId = 1;
@@ -126,12 +127,12 @@ router.post(
   }
 );
 
-// Upload file resource (admin)
+// Upload file resource(s) (admin) - supports multiple files
 router.post(
   '/upload',
   tokenRequired,
   roleRequired(['admin']),
-  upload.single('file'),
+  upload.array('files', 50), // Allow up to 50 files
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -140,44 +141,86 @@ router.post(
     }
 
     try {
-      const { title, description } = req.body;
-
-      if (!title) {
-        return res.status(400).json({ error: 'Title is required' });
+      const { titles, descriptions } = req.body;
+      // Parse JSON strings if they come as strings (FormData limitation)
+      let titleList: string[] = [];
+      let descriptionList: string[] = [];
+      
+      try {
+        titleList = typeof titles === 'string' ? JSON.parse(titles) : (titles || []);
+        descriptionList = typeof descriptions === 'string' ? JSON.parse(descriptions) : (descriptions || []);
+      } catch (e) {
+        // If parsing fails, try single title/description for backward compatibility
+        if (req.body.title) {
+          titleList = [req.body.title];
+          descriptionList = [req.body.description || ''];
+        }
       }
 
-      if (!req.file) {
-        return res.status(400).json({ error: 'File is required' });
+      const files = req.files as Express.Multer.File[];
+      
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: 'At least one file is required' });
       }
 
-      // Save file
+      // If single title provided but multiple files, use filenames (title can be used as description hint)
+      if (titleList.length === 1 && files.length > 1) {
+        titleList = files.map((file) => file.originalname);
+        // Keep the provided description for all files
+        descriptionList = files.map(() => descriptionList[0] || '');
+      }
+
+      // Ensure we have titles for all files
+      if (titleList.length !== files.length) {
+        titleList = files.map((file, index) => 
+          titleList[index] || file.originalname
+        );
+        descriptionList = files.map((file, index) => 
+          descriptionList[index] || ''
+        );
+      }
+
+      // Save files
       const uploadsDir = path.join(process.cwd(), 'uploads', 'resources');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
 
-      const ext = path.extname(req.file.originalname);
-      const filename = `resource-${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
-      const filepath = path.join(uploadsDir, filename);
+      // Generate batch ID for files uploaded together
+      const batchId = `batch-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const createdResources: any[] = [];
 
-      fs.writeFileSync(filepath, req.file.buffer);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const title = titleList[i] || file.originalname;
+        const description = descriptionList[i] || '';
 
-      const resource = {
-        id: nextResourceId++,
-        title,
-        description: description || undefined,
-        type: 'file' as const,
-        fileUrl: `/resources/files/${filename}`,
-        fileName: req.file.originalname,
-        fileSize: req.file.size,
-        createdAt: new Date().toISOString(),
-      };
+        const ext = path.extname(file.originalname);
+        const filename = `resource-${Date.now()}-${i}-${Math.random().toString(36).substring(7)}${ext}`;
+        const filepath = path.join(uploadsDir, filename);
 
-      resources.push(resource);
+        fs.writeFileSync(filepath, file.buffer);
+
+        const resource = {
+          id: nextResourceId++,
+          title,
+          description: description || undefined,
+          type: 'file' as const,
+          fileUrl: `/resources/files/${filename}`,
+          fileName: file.originalname,
+          fileSize: file.size,
+          createdAt: new Date().toISOString(),
+          batchId: files.length > 1 ? batchId : undefined, // Only add batchId if multiple files
+        };
+
+        resources.push(resource);
+        createdResources.push(resource);
+      }
 
       return res.json({
         success: true,
-        resource,
+        resources: createdResources,
+        count: createdResources.length,
       });
     } catch (error: any) {
       console.error('Error uploading resource:', error);

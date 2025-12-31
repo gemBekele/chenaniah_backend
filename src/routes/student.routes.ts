@@ -246,8 +246,9 @@ router.post('/submit-assignment', tokenRequired, upload.array('files', 3), async
     const parsedAssignmentId = assignmentId ? parseInt(assignmentId) : undefined;
     const parsedSessionId = sessionId ? parseInt(sessionId) : undefined;
 
-    if (!parsedAssignmentId && !parsedSessionId) {
-      return res.status(400).json({ error: 'Assignment ID or session ID is required' });
+    // Text is required
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Submission text is required' });
     }
 
     if (parsedAssignmentId !== undefined && isNaN(parsedAssignmentId)) {
@@ -256,6 +257,11 @@ router.post('/submit-assignment', tokenRequired, upload.array('files', 3), async
 
     if (parsedSessionId !== undefined && isNaN(parsedSessionId)) {
       return res.status(400).json({ error: 'Invalid session ID' });
+    }
+
+    // If no assignmentId and no sessionId, we can't create a submission
+    if (!parsedAssignmentId && !parsedSessionId) {
+      return res.status(400).json({ error: 'Please select an assignment or a session' });
     }
 
     let filePaths: string[] = [];
