@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { tokenRequired, roleRequired, AuthRequest } from '../middleware/auth';
 import { config } from '../config';
+import prisma from '../db';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -32,23 +33,6 @@ const addCorsHeaders = (res: Response, req: Request) => {
   res.setHeader('Access-Control-Max-Age', '3600');
 };
 
-// For now, we'll use a simple in-memory store
-// In production, this should use a database
-let resources: Array<{
-  id: number;
-  title: string;
-  description?: string;
-  type: 'file' | 'link';
-  url?: string;
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: number;
-  createdAt: string;
-  batchId?: string;
-}> = [];
-
-let nextResourceId = 1;
-
 // Get all resources (public for students - requires auth)
 router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
@@ -57,10 +41,33 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
     return res.sendStatus(200);
   }
 
-  return res.json({
-    success: true,
-    resources,
-  });
+  try {
+    const resources = await prisma.resource.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Transform to match frontend expectations
+    const transformedResources = resources.map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description || undefined,
+      type: r.type as 'file' | 'link',
+      url: r.url || undefined,
+      fileUrl: r.fileUrl || undefined,
+      fileName: r.fileName || undefined,
+      fileSize: r.fileSize || undefined,
+      createdAt: r.createdAt.toISOString(),
+      batchId: r.batchId || undefined,
+    }));
+
+    return res.json({
+      success: true,
+      resources: transformedResources,
+    });
+  } catch (error: any) {
+    console.error('Error fetching resources:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
 });
 
 // Get all resources (admin) - accessible via /api/admin/resources/all
@@ -75,10 +82,33 @@ router.get(
       return res.sendStatus(200);
     }
 
-    return res.json({
-      success: true,
-      resources,
-    });
+    try {
+      const resources = await prisma.resource.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Transform to match frontend expectations
+      const transformedResources = resources.map((r) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description || undefined,
+        type: r.type as 'file' | 'link',
+        url: r.url || undefined,
+        fileUrl: r.fileUrl || undefined,
+        fileName: r.fileName || undefined,
+        fileSize: r.fileSize || undefined,
+        createdAt: r.createdAt.toISOString(),
+        batchId: r.batchId || undefined,
+      }));
+
+      return res.json({
+        success: true,
+        resources: transformedResources,
+      });
+    } catch (error: any) {
+      console.error('Error fetching resources:', error);
+      return res.status(500).json({ error: error.message || 'Internal server error' });
+    }
   }
 );
 
@@ -105,20 +135,29 @@ router.post(
         return res.status(400).json({ error: 'URL is required for link type' });
       }
 
-      const resource = {
-        id: nextResourceId++,
-        title,
-        description,
-        type,
-        url: type === 'link' ? url : undefined,
-        createdAt: new Date().toISOString(),
-      };
-
-      resources.push(resource);
+      const resource = await prisma.resource.create({
+        data: {
+          title,
+          description: description || null,
+          type,
+          url: type === 'link' ? url : null,
+        },
+      });
 
       return res.json({
         success: true,
-        resource,
+        resource: {
+          id: resource.id,
+          title: resource.title,
+          description: resource.description || undefined,
+          type: resource.type as 'file' | 'link',
+          url: resource.url || undefined,
+          fileUrl: resource.fileUrl || undefined,
+          fileName: resource.fileName || undefined,
+          fileSize: resource.fileSize || undefined,
+          createdAt: resource.createdAt.toISOString(),
+          batchId: resource.batchId || undefined,
+        },
       });
     } catch (error: any) {
       console.error('Error creating resource:', error);
@@ -187,7 +226,7 @@ router.post(
       }
 
       // Generate batch ID for files uploaded together
-      const batchId = `batch-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const batchId = files.length > 1 ? `batch-${Date.now()}-${Math.random().toString(36).substring(7)}` : null;
       const createdResources: any[] = [];
 
       for (let i = 0; i < files.length; i++) {
@@ -201,20 +240,30 @@ router.post(
 
         fs.writeFileSync(filepath, file.buffer);
 
-        const resource = {
-          id: nextResourceId++,
-          title,
-          description: description || undefined,
-          type: 'file' as const,
-          fileUrl: `/resources/files/${filename}`,
-          fileName: file.originalname,
-          fileSize: file.size,
-          createdAt: new Date().toISOString(),
-          batchId: files.length > 1 ? batchId : undefined, // Only add batchId if multiple files
-        };
+        const resource = await prisma.resource.create({
+          data: {
+            title,
+            description: description || null,
+            type: 'file',
+            fileUrl: `/resources/files/${filename}`,
+            fileName: file.originalname,
+            fileSize: file.size,
+            batchId: batchId,
+          },
+        });
 
-        resources.push(resource);
-        createdResources.push(resource);
+        createdResources.push({
+          id: resource.id,
+          title: resource.title,
+          description: resource.description || undefined,
+          type: resource.type as 'file' | 'link',
+          url: resource.url || undefined,
+          fileUrl: resource.fileUrl || undefined,
+          fileName: resource.fileName || undefined,
+          fileSize: resource.fileSize || undefined,
+          createdAt: resource.createdAt.toISOString(),
+          batchId: resource.batchId || undefined,
+        });
       }
 
       return res.json({
@@ -224,6 +273,166 @@ router.post(
       });
     } catch (error: any) {
       console.error('Error uploading resource:', error);
+      return res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+);
+
+// Delete resource(s) (admin)
+router.delete(
+  '/:id',
+  tokenRequired,
+  roleRequired(['admin']),
+  async (req: AuthRequest, res: Response) => {
+    addCorsHeaders(res, req);
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+
+    try {
+      const resourceId = parseInt(req.params.id);
+
+      if (isNaN(resourceId)) {
+        return res.status(400).json({ error: 'Invalid resource ID' });
+      }
+
+      const resource = await prisma.resource.findUnique({
+        where: { id: resourceId },
+      });
+
+      if (!resource) {
+        return res.status(404).json({ error: 'Resource not found' });
+      }
+
+      // If it's a file resource, delete the physical file
+      if (resource.type === 'file' && resource.fileUrl) {
+        try {
+          // Extract filename from fileUrl (format: /resources/files/filename)
+          const filename = resource.fileUrl.split('/').pop();
+          if (filename) {
+            const filepath = path.join(process.cwd(), 'uploads', 'resources', filename);
+            if (fs.existsSync(filepath)) {
+              fs.unlinkSync(filepath);
+            }
+          }
+        } catch (fileError: any) {
+          // Log error but continue with deletion from database
+          console.error('Error deleting resource file:', fileError);
+        }
+      }
+
+      // Delete from database
+      await prisma.resource.delete({
+        where: { id: resourceId },
+      });
+
+      return res.json({
+        success: true,
+        message: 'Resource deleted successfully',
+        deletedResource: {
+          id: resource.id,
+          title: resource.title,
+          description: resource.description || undefined,
+          type: resource.type as 'file' | 'link',
+          url: resource.url || undefined,
+          fileUrl: resource.fileUrl || undefined,
+          fileName: resource.fileName || undefined,
+          fileSize: resource.fileSize || undefined,
+          createdAt: resource.createdAt.toISOString(),
+          batchId: resource.batchId || undefined,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error deleting resource:', error);
+      return res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+);
+
+// Delete multiple resources (admin) - accepts array of IDs in body
+router.delete(
+  '/',
+  tokenRequired,
+  roleRequired(['admin']),
+  async (req: AuthRequest, res: Response) => {
+    addCorsHeaders(res, req);
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+
+    try {
+      const { ids } = req.body;
+
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'Array of resource IDs is required' });
+      }
+
+      const resourceIds = ids
+        .map((id) => (typeof id === 'string' ? parseInt(id) : id))
+        .filter((id) => !isNaN(id)) as number[];
+
+      if (resourceIds.length === 0) {
+        return res.status(400).json({ error: 'No valid resource IDs provided' });
+      }
+
+      // Fetch resources to get file paths before deletion
+      const resources = await prisma.resource.findMany({
+        where: { id: { in: resourceIds } },
+      });
+
+      const deletedResources: any[] = [];
+      const notFoundIds: number[] = [];
+
+      // Delete physical files and track which resources exist
+      for (const resource of resources) {
+        if (resource.type === 'file' && resource.fileUrl) {
+          try {
+            const filename = resource.fileUrl.split('/').pop();
+            if (filename) {
+              const filepath = path.join(process.cwd(), 'uploads', 'resources', filename);
+              if (fs.existsSync(filepath)) {
+                fs.unlinkSync(filepath);
+              }
+            }
+          } catch (fileError: any) {
+            console.error(`Error deleting file for resource ${resource.id}:`, fileError);
+          }
+        }
+
+        deletedResources.push({
+          id: resource.id,
+          title: resource.title,
+          description: resource.description || undefined,
+          type: resource.type as 'file' | 'link',
+          url: resource.url || undefined,
+          fileUrl: resource.fileUrl || undefined,
+          fileName: resource.fileName || undefined,
+          fileSize: resource.fileSize || undefined,
+          createdAt: resource.createdAt.toISOString(),
+          batchId: resource.batchId || undefined,
+        });
+      }
+
+      // Find IDs that weren't found
+      const foundIds = resources.map((r) => r.id);
+      notFoundIds.push(...resourceIds.filter((id) => !foundIds.includes(id)));
+
+      // Delete from database
+      await prisma.resource.deleteMany({
+        where: { id: { in: resourceIds } },
+      });
+
+      return res.json({
+        success: true,
+        message: `Deleted ${deletedResources.length} resource(s)`,
+        deletedCount: deletedResources.length,
+        deletedResources,
+        notFoundIds: notFoundIds.length > 0 ? notFoundIds : undefined,
+      });
+    } catch (error: any) {
+      console.error('Error deleting resources:', error);
       return res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }
@@ -263,4 +472,3 @@ router.options('*', (req: Request, res: Response) => {
 });
 
 export default router;
-
