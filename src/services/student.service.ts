@@ -255,7 +255,7 @@ export class StudentService {
   }
 
   async getStudentStats(studentId: number) {
-    const [assignments, payments, student] = await Promise.all([
+    const [assignments, payments, student, attendanceRecords, notes] = await Promise.all([
       prisma.assignmentSubmission.findMany({
         where: { studentId },
         include: {
@@ -269,6 +269,33 @@ export class StudentService {
       }),
       prisma.student.findUnique({
         where: { id: studentId },
+      }),
+      prisma.attendance.findMany({
+        where: { studentId },
+        include: {
+          session: {
+            select: {
+              id: true,
+              name: true,
+              date: true,
+              location: true,
+            },
+          },
+        },
+        orderBy: { scannedAt: 'desc' },
+      }),
+      prisma.note.findMany({
+        where: { authorId: studentId, authorType: 'student' },
+        include: {
+          session: {
+            select: {
+              id: true,
+              name: true,
+              date: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
       }),
     ]);
 
@@ -320,6 +347,14 @@ export class StudentService {
         pending: pendingPayments,
         overdue: overduePayments,
         records: payments,
+      },
+      attendance: {
+        total: attendanceRecords.length,
+        records: attendanceRecords,
+      },
+      notes: {
+        total: notes.length,
+        records: notes,
       },
     };
   }

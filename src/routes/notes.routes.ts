@@ -123,13 +123,64 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const { sessionId, page = '1', limit = '20' } = req.query;
+    const { 
+      sessionId, 
+      page = '1', 
+      limit = '50',
+      search,
+      authorType,
+      noteType,
+      dateFrom,
+      dateTo,
+      authorId
+    } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
 
     const where: any = {};
-    if (sessionId) {
+    
+    if (sessionId && sessionId !== 'all') {
       where.sessionId = parseInt(sessionId as string);
+    }
+    
+    if (authorType && authorType !== 'all') {
+      where.authorType = authorType as string;
+    }
+    
+    if (noteType && noteType !== 'all') {
+      where.type = noteType as string;
+    }
+    
+    if (authorId) {
+      where.authorId = parseInt(authorId as string);
+    }
+    
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) {
+        where.createdAt.gte = new Date(dateFrom as string);
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo as string);
+        endDate.setHours(23, 59, 59, 999);
+        where.createdAt.lte = endDate;
+      }
+    }
+    
+    // Add search filtering (content, student names)
+    if (search) {
+      const searchTerm = (search as string).toLowerCase();
+      where.OR = [
+        { content: { contains: search as string, mode: 'insensitive' } },
+        { 
+          student: {
+            OR: [
+              { fullNameEnglish: { contains: search as string, mode: 'insensitive' } },
+              { fullNameAmharic: { contains: search as string, mode: 'insensitive' } }
+            ]
+          }
+        }
+      ];
     }
 
     const [notes, total] = await Promise.all([
@@ -141,6 +192,7 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
               id: true,
               fullNameEnglish: true,
               fullNameAmharic: true,
+              photoPath: true,
             },
           },
           session: {
@@ -158,6 +210,15 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
       prisma.note.count({ where }),
     ]);
 
+    // Get aggregated counts
+    const [totalNotes, totalImageNotes, totalTextNotes, totalStudentNotes, totalAdminNotes] = await Promise.all([
+      prisma.note.count(),
+      prisma.note.count({ where: { type: 'image' } }),
+      prisma.note.count({ where: { type: 'text' } }),
+      prisma.note.count({ where: { authorType: 'student' } }),
+      prisma.note.count({ where: { authorType: 'admin' } }),
+    ]);
+
     return res.json({
       success: true,
       notes,
@@ -166,6 +227,14 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
         limit: limitNum,
         total,
         totalPages: Math.ceil(total / limitNum),
+      },
+      counts: {
+        total: totalNotes,
+        images: totalImageNotes,
+        text: totalTextNotes,
+        student: totalStudentNotes,
+        admin: totalAdminNotes,
+        filtered: total,
       },
     });
   } catch (error: any) {
@@ -195,10 +264,15 @@ router.get('/sessions', tokenRequired, async (req: AuthRequest, res: Response) =
         id: true,
         name: true,
         date: true,
+        _count: {
+          select: {
+            notes: true,
+          },
+        },
       },
     });
 
-    // Get note counts for each session, filtered by user
+    // Get note counts for each session (for admin, all notes; for students, only their notes)
     const sessionsWithCounts = await Promise.all(
       sessions.map(async (session) => {
         const noteCount = await prisma.note.count({
@@ -212,7 +286,9 @@ router.get('/sessions', tokenRequired, async (req: AuthRequest, res: Response) =
           id: session.id,
           name: session.name,
           date: session.date,
-          notesCount: noteCount,
+          _count: {
+            notes: noteCount,
+          },
         };
       })
     );
