@@ -21,3 +21,9 @@ CREATE INDEX IF NOT EXISTS "idx_resources_type" ON "resources"("type");
 CREATE INDEX IF NOT EXISTS "idx_resources_created_at" ON "resources"("created_at");
 CREATE INDEX IF NOT EXISTS "idx_resources_batch_id" ON "resources"("batch_id");
 
+
+
+
+
+
+

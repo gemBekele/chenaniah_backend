@@ -97,6 +97,8 @@ export class AssignmentService {
         submittedAt: submission?.submittedAt,
         grade: submission?.grade,
         feedback: submission?.feedback,
+        submissionText: submission?.text,
+        filePaths: submission?.filePaths,
         session: assignment.session,
       };
     });

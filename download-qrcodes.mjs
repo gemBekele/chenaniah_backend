@@ -49,7 +49,7 @@ async function main() {
   
   // Target phone numbers (using last 8 digits)
   const targetPhones = [
-    '0911542292'
+    '0938896759','0972332873','0921379906','0953504161','0910518876','0911542292','0908220838'
     
   ];
   

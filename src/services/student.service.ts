@@ -350,7 +350,47 @@ export class StudentService {
       },
       attendance: {
         total: attendanceRecords.length,
-        records: attendanceRecords,
+        records: await (async () => {
+          // Fetch all sessions
+          const allSessions = await prisma.session.findMany({
+            orderBy: { date: 'desc' },
+            select: {
+              id: true,
+              name: true,
+              date: true,
+              location: true,
+            },
+          });
+
+          // Create a map of attendance records for quick lookup
+          const attendanceMap = new Map(attendanceRecords.map(r => [r.sessionId, r]));
+
+          // Merge sessions with attendance
+          return allSessions.map(session => {
+            const attendance = attendanceMap.get(session.id);
+            if (attendance) {
+              return {
+                id: attendance.id,
+                sessionId: session.id,
+                scannedAt: attendance.scannedAt,
+                isOffline: attendance.isOffline,
+                notes: attendance.notes,
+                status: 'present',
+                session: session,
+              };
+            } else {
+              return {
+                id: -session.id, // Negative ID for missed sessions to avoid key conflicts
+                sessionId: session.id,
+                scannedAt: null,
+                isOffline: false,
+                notes: null,
+                status: 'absent',
+                session: session,
+              };
+            }
+          });
+        })(),
       },
       notes: {
         total: notes.length,
