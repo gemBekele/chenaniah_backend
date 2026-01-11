@@ -56,4 +56,4 @@ export const roleRequired = (allowedRoles: string[]) => {
     next();
   };
 };
-
+export const adminRequired = roleRequired(['admin']);

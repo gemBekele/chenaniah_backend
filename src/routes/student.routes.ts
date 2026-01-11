@@ -65,6 +65,9 @@ router.get('/profile', tokenRequired, async (req: AuthRequest, res: Response) =>
       hasEssay: !!student.essay,
       hasPortrait: !!student.photoPath,
       photoPath: student.photoPath,
+      sectionId: (student as any).sectionId,
+      section: (student as any).section,
+      ledSection: (student as any).ledSection,
     };
 
     return res.json({
@@ -168,6 +171,41 @@ router.post('/submit-essay', tokenRequired, async (req: AuthRequest, res: Respon
     });
   } catch (error: any) {
     console.error('Error submitting essay:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Select section
+router.post('/select-section', tokenRequired, async (req: AuthRequest, res: Response) => {
+  addCorsHeaders(res, req);
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  try {
+    const userId = (req.user as any)?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { sectionId } = req.body;
+
+    if (!sectionId) {
+      return res.status(400).json({ error: 'Section ID is required' });
+    }
+
+    await prisma.student.update({
+      where: { id: userId },
+      data: { sectionId: parseInt(sectionId) } as any,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Section selected successfully',
+    });
+  } catch (error: any) {
+    console.error('Error selecting section:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });

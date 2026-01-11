@@ -6,6 +6,8 @@ import prisma from '../db';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { botService } from '../services/bot.service';
+
 // Note: multer needs to be installed: npm install multer @types/multer
 
 const router = Router();
@@ -42,7 +44,24 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
   }
 
   try {
+    const studentId = req.user?.userId;
+    let sectionId: number | null = null;
+
+    if (req.user?.role === 'student' && studentId) {
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        select: { sectionId: true },
+      });
+      sectionId = student?.sectionId || null;
+    }
+
     const resources = await prisma.resource.findMany({
+      where: {
+        OR: [
+          { sectionId: null }, // Public resources
+          { sectionId: sectionId }, // Section-specific resources
+        ],
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -58,6 +77,7 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
       fileSize: r.fileSize || undefined,
       createdAt: r.createdAt.toISOString(),
       batchId: r.batchId || undefined,
+      sectionId: r.sectionId || undefined,
     }));
 
     return res.json({
@@ -99,6 +119,7 @@ router.get(
         fileSize: r.fileSize || undefined,
         createdAt: r.createdAt.toISOString(),
         batchId: r.batchId || undefined,
+        sectionId: r.sectionId || undefined,
       }));
 
       return res.json({
@@ -166,11 +187,27 @@ router.post(
   }
 );
 
-// Upload file resource(s) (admin) - supports multiple files
+// Upload file resource(s) (admin or section leader) - supports multiple files
 router.post(
   '/upload',
   tokenRequired,
-  roleRequired(['admin']),
+  async (req: AuthRequest, res: Response, next) => {
+    // Custom authorization: admin or section leader
+    if (req.user?.role === 'admin') {
+      return next();
+    }
+    
+    if (req.user?.role === 'student' && req.user.userId) {
+      const ledSection = await prisma.section.findUnique({
+        where: { leaderId: req.user.userId }
+      });
+      if (ledSection) {
+        return next();
+      }
+    }
+    
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  },
   upload.array('files', 50), // Allow up to 50 files
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
@@ -249,6 +286,7 @@ router.post(
             fileName: file.originalname,
             fileSize: file.size,
             batchId: batchId,
+            sectionId: req.body.sectionId ? parseInt(req.body.sectionId) : null,
           },
         });
 
@@ -273,6 +311,51 @@ router.post(
       });
     } catch (error: any) {
       console.error('Error uploading resource:', error);
+      return res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+);
+
+// Send resource to Telegram
+router.post(
+  '/:id/send-to-telegram',
+  tokenRequired,
+  async (req: AuthRequest, res: Response) => {
+    addCorsHeaders(res, req);
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+
+    try {
+      const resourceId = parseInt(req.params.id);
+      const studentId = req.user?.userId;
+
+      if (isNaN(resourceId)) {
+        return res.status(400).json({ error: 'Invalid resource ID' });
+      }
+
+      if (!studentId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      try {
+        await botService.sendResourceToUser(studentId, resourceId);
+        return res.json({
+          success: true,
+          message: 'Resource sent to Telegram successfully',
+        });
+      } catch (botError: any) {
+        if (botError.message === 'Student not linked to Telegram') {
+          return res.status(400).json({ 
+            error: 'You haven\'t linked your Telegram account yet. Please open the bot and share your contact first.',
+            notLinked: true
+          });
+        }
+        throw botError;
+      }
+    } catch (error: any) {
+      console.error('Error sending resource to Telegram:', error);
       return res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }

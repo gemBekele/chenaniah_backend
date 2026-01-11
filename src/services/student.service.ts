@@ -129,7 +129,9 @@ export class StudentService {
       where: { id },
       include: {
         appointment: true,
-      },
+        section: true,
+        ledSection: true,
+      } as any,
     });
 
     if (!student) {
@@ -197,16 +199,21 @@ export class StudentService {
 
   async getAllStudents(params: {
     status?: string;
+    sectionId?: number;
     searchQuery?: string;
     limit?: number;
     offset?: number;
   }) {
-    const { status, searchQuery, limit = 10000, offset = 0 } = params;
+    const { status, sectionId, searchQuery, limit = 10000, offset = 0 } = params;
 
     const where: Prisma.StudentWhereInput = {};
 
     if (status) {
       where.status = status;
+    }
+
+    if (sectionId) {
+      where.sectionId = sectionId;
     }
 
     if (searchQuery) {

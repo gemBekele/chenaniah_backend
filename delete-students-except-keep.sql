@@ -1,0 +1,2 @@
+BEGIN; DELETE FROM assignment_submissions WHERE student_id IN (132, 42, 157, 122); DELETE FROM payments WHERE student_id IN (132, 42, 157, 122); DELETE FROM attendance WHERE student_id IN (132, 42, 157, 122); DELETE FROM notices WHERE target_student_id IN (132, 42, 157, 122); DELETE FROM notes WHERE author_id IN (132, 42, 157, 122); DELETE FROM team_memberships WHERE student_id IN (132, 42, 157, 122); DELETE FROM prayer_slots WHERE claimed_by_id IN (132, 42, 157, 122); DELETE FROM students WHERE id IN (132, 42, 157, 122); COMMIT;
+

@@ -36,12 +36,14 @@ router.get(
 
     try {
       const status = req.query.status as string | undefined;
+      const sectionId = req.query.sectionId ? parseInt(req.query.sectionId as string) : undefined;
       const searchQuery = req.query.search as string | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const offset = parseInt(req.query.offset as string) || 0;
 
       const result = await studentService.getAllStudents({
         status,
+        sectionId,
         searchQuery,
         limit,
         offset,
@@ -128,6 +130,45 @@ router.put(
       });
     } catch (error: any) {
       console.error('Error updating trainee status:', error);
+      return res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+);
+
+// Update trainee section
+router.put(
+  '/:id/section',
+  tokenRequired,
+  roleRequired(['admin']),
+  async (req: AuthRequest, res: Response) => {
+    addCorsHeaders(res, req);
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+
+    try {
+      const studentId = parseInt(req.params.id);
+      const { sectionId } = req.body;
+
+      if (isNaN(studentId)) {
+        return res.status(400).json({ error: 'Invalid student ID' });
+      }
+
+      const prisma = (await import('../db')).default;
+      const student = await prisma.student.update({
+        where: { id: studentId },
+        data: { sectionId: sectionId ? parseInt(sectionId) : null } as any,
+      });
+
+      const { passwordHash, ...studentWithoutPassword } = student;
+
+      return res.json({
+        success: true,
+        student: studentWithoutPassword,
+      });
+    } catch (error: any) {
+      console.error('Error updating trainee section:', error);
       return res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }

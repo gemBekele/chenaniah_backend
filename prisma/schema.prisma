@@ -163,8 +163,13 @@ model Student {
   appointmentId            Int?     @map("appointment_id")
   status                   String   @default("active") // active, inactive, graduated, dismissed
   qrCode                   String?  @unique @map("qr_code") // Unique QR code identifier for attendance
+  telegramChatId           BigInt?  @unique @map("telegram_chat_id")
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
+
+  sectionId                Int?     @map("section_id")
+  section                  Section? @relation("SectionStudents", fields: [sectionId], references: [id])
+  ledSection               Section? @relation("SectionLeader")
 
   appointment           Appointment?           @relation(fields: [appointmentId], references: [id])
   assignmentSubmissions AssignmentSubmission[]
@@ -178,8 +183,25 @@ model Student {
   @@index([username], map: "idx_students_username")
   @@index([phone], map: "idx_students_phone")
   @@index([status], map: "idx_students_status")
-  @@index([qrCode], map: "idx_students_qr_code")
+  @@index([sectionId], map: "idx_students_section_id")
   @@map("students")
+}
+
+model Section {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // e.g., "a- Soprano"
+  code      String   @unique // e.g., "a", "b", ...
+  color     String   @default("#3B82F6")
+  leaderId  Int?     @unique @map("leader_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  leader    Student? @relation("SectionLeader", fields: [leaderId], references: [id])
+  students  Student[] @relation("SectionStudents")
+  resources Resource[]
+  notices   Notice[]
+
+  @@map("sections")
 }
 
 model Assignment {
@@ -290,14 +312,17 @@ model Notice {
   type            String   @default("info") // info, warning, success, urgent
   active          Boolean  @default(true)
   targetStudentId Int?     @map("target_student_id") // If set, personal notice for specific student
+  sectionId       Int?     @map("section_id") // If set, notice for specific section
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   targetStudent Student? @relation(fields: [targetStudentId], references: [id])
+  section       Section? @relation(fields: [sectionId], references: [id])
 
   @@index([active], map: "idx_notices_active")
   @@index([createdAt], map: "idx_notices_created_at")
   @@index([targetStudentId], map: "idx_notices_target_student")
+  @@index([sectionId], map: "idx_notices_section")
   @@map("notices")
 }
 
@@ -397,11 +422,15 @@ model Resource {
   fileName    String?   @map("file_name") // Original filename
   fileSize    Int?      @map("file_size") // File size in bytes
   batchId     String?   @map("batch_id") // For grouping files uploaded together
+  sectionId   Int?      @map("section_id")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  section     Section?  @relation(fields: [sectionId], references: [id])
 
   @@index([type], map: "idx_resources_type")
   @@index([createdAt], map: "idx_resources_created_at")
   @@index([batchId], map: "idx_resources_batch_id")
+  @@index([sectionId], map: "idx_resources_section_id")
   @@map("resources")
 }

@@ -20,6 +20,7 @@ import noticeRoutes from './routes/notice.routes';
 import notesRoutes from './routes/notes.routes';
 import teamsRoutes from './routes/teams.routes';
 import prayerRoutes from './routes/prayer.routes';
+import sectionRoutes from './routes/section.routes';
 
 // Handle BigInt serialization
 (BigInt.prototype as any).toJSON = function () {
@@ -88,6 +89,7 @@ app.use('/api/admin/notices', noticeRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/prayer', prayerRoutes);
+app.use('/api/sections', sectionRoutes);
 
 // API Routes - mount under /api/v2 (production frontend)
 app.use('/api/v2/auth', authRoutes);
@@ -107,6 +109,8 @@ app.use('/api/v2/admin/notices', noticeRoutes);
 app.use('/api/v2/notes', notesRoutes);
 app.use('/api/v2/teams', teamsRoutes);
 app.use('/api/v2/prayer', prayerRoutes);
+app.use('/api/v2/sections', sectionRoutes);
+app.use('/api/v2/admin/sections', sectionRoutes);
 
 // API Routes - mount under /api/api (for frontend using https://chenaniah.org/api/v2/api)
 // Nginx rewrites /api/v2/api/* to /api/api/*, so we need to handle these paths
@@ -127,6 +131,8 @@ app.use('/api/api/admin/notices', noticeRoutes);
 app.use('/api/api/notes', notesRoutes);
 app.use('/api/api/teams', teamsRoutes);
 app.use('/api/api/prayer', prayerRoutes);
+app.use('/api/api/sections', sectionRoutes);
+app.use('/api/api/admin/sections', sectionRoutes);
 
 // Serve uploaded files (assignments, payments, resources, student-documents)
 // This route must be before the 404 handler
@@ -222,6 +228,13 @@ const PORT = config.api.port;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
+  
+  // Start Telegram Bot
+  import('./services/bot.service').then(({ botService }) => {
+    botService.start();
+  }).catch(err => {
+    console.error('Failed to load bot service:', err);
+  });
 });
 
 export default app;

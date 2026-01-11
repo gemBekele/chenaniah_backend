@@ -1,0 +1,2 @@
+SELECT s.id, COALESCE(s.full_name_english, s.full_name_amharic, s.username) AS name, s.phone, s.username, 4 - COUNT(a.id) AS missed_count, (SELECT STRING_AGG(sess.name, ', ') FROM sessions sess WHERE sess.id IN (6,7,8,9) AND sess.id NOT IN (SELECT att.session_id FROM attendance att WHERE att.student_id = s.id)) AS missed_sessions FROM students s LEFT JOIN attendance a ON s.id = a.student_id AND a.session_id IN (6,7,8,9) WHERE s.status = 'active' GROUP BY s.id, s.full_name_english, s.full_name_amharic, s.username, s.phone HAVING 4 - COUNT(a.id) >= 2;
+

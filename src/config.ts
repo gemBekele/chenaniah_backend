@@ -58,6 +58,12 @@ export const config = {
   audio: {
     filesDir: process.env.AUDIO_FILES_DIR || './audio_files',
   },
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    // Proxy support for regions where Telegram is blocked
+    // Set TELEGRAM_PROXY_URL to use a proxy (e.g., socks5://127.0.0.1:1080 or http://127.0.0.1:8080)
+    proxyUrl: process.env.TELEGRAM_PROXY_URL || '',
+  },
 };
 
 
