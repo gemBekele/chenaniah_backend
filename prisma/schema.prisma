@@ -417,6 +417,7 @@ model Resource {
   title       String
   description String?   @db.Text
   type        String    // "file" or "link"
+  category    String    @default("General") // e.g., "Sheet Music", "Audio", "Lyrics", "General"
   url         String?   // For link type resources
   fileUrl     String?   @map("file_url") // Path to file for file type resources
   fileName    String?   @map("file_name") // Original filename

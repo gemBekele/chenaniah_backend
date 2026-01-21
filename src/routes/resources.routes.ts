@@ -78,6 +78,7 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
       createdAt: r.createdAt.toISOString(),
       batchId: r.batchId || undefined,
       sectionId: r.sectionId || undefined,
+      category: r.category,
     }));
 
     return res.json({
@@ -120,6 +121,7 @@ router.get(
         createdAt: r.createdAt.toISOString(),
         batchId: r.batchId || undefined,
         sectionId: r.sectionId || undefined,
+        category: r.category,
       }));
 
       return res.json({
@@ -132,6 +134,36 @@ router.get(
     }
   }
 );
+
+// Get all unique resource categories
+router.get('/categories', tokenRequired, async (req: AuthRequest, res: Response) => {
+  addCorsHeaders(res, req);
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  try {
+    const categories = await prisma.resource.findMany({
+      select: { category: true },
+      distinct: ['category'],
+      orderBy: { category: 'asc' },
+    });
+
+    // Ensure we have a clean list of strings
+    const categoryList = categories
+      .map(c => c.category)
+      .filter(Boolean); // Remove nulls/undefined if any
+
+    return res.json({
+      success: true,
+      categories: categoryList,
+    });
+  } catch (error: any) {
+    console.error('Error fetching categories:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
 
 // Create resource (admin)
 router.post(
@@ -146,7 +178,7 @@ router.post(
     }
 
     try {
-      const { title, description, type, url } = req.body;
+      const { title, description, type, url, category } = req.body;
 
       if (!title || !type) {
         return res.status(400).json({ error: 'Title and type are required' });
@@ -161,6 +193,7 @@ router.post(
           title,
           description: description || null,
           type,
+          category: category || 'General',
           url: type === 'link' ? url : null,
         },
       });
@@ -178,6 +211,7 @@ router.post(
           fileSize: resource.fileSize || undefined,
           createdAt: resource.createdAt.toISOString(),
           batchId: resource.batchId || undefined,
+          category: resource.category,
         },
       });
     } catch (error: any) {
@@ -217,7 +251,7 @@ router.post(
     }
 
     try {
-      const { titles, descriptions } = req.body;
+      const { titles, descriptions, category } = req.body;
       // Parse JSON strings if they come as strings (FormData limitation)
       let titleList: string[] = [];
       let descriptionList: string[] = [];
@@ -287,6 +321,7 @@ router.post(
             fileSize: file.size,
             batchId: batchId,
             sectionId: req.body.sectionId ? parseInt(req.body.sectionId) : null,
+            category: category || 'General',
           },
         });
 
@@ -301,6 +336,7 @@ router.post(
           fileSize: resource.fileSize || undefined,
           createdAt: resource.createdAt.toISOString(),
           batchId: resource.batchId || undefined,
+          category: resource.category,
         });
       }
 
@@ -424,6 +460,7 @@ router.delete(
           fileSize: resource.fileSize || undefined,
           createdAt: resource.createdAt.toISOString(),
           batchId: resource.batchId || undefined,
+          category: resource.category,
         },
       });
     } catch (error: any) {
@@ -495,6 +532,7 @@ router.delete(
           fileSize: resource.fileSize || undefined,
           createdAt: resource.createdAt.toISOString(),
           batchId: resource.batchId || undefined,
+          category: resource.category,
         });
       }
 
