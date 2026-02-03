@@ -18,7 +18,7 @@ const addCorsHeaders = (res: Response, req: Request) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Max-Age', '3600');
 };
 
@@ -169,6 +169,96 @@ router.put(
       });
     } catch (error: any) {
       console.error('Error updating trainee section:', error);
+      return res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  }
+);
+
+// Delete a student and all related records
+router.delete(
+  '/:id',
+  tokenRequired,
+  roleRequired(['admin']),
+  async (req: AuthRequest, res: Response) => {
+    addCorsHeaders(res, req);
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+
+    try {
+      const studentId = parseInt(req.params.id);
+      if (isNaN(studentId)) {
+        return res.status(400).json({ error: 'Invalid student ID' });
+      }
+
+      const prisma = (await import('../db')).default;
+
+      // Check if student exists
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+      });
+
+      if (!student) {
+        return res.status(404).json({ error: 'Student not found' });
+      }
+
+      // Use a transaction to delete all related records
+      await prisma.$transaction(async (tx) => {
+        // Clear section leader if this student leads a section
+        await tx.section.updateMany({
+          where: { leaderId: studentId },
+          data: { leaderId: null },
+        });
+
+        // Clear claimed prayer slots
+        await tx.prayerSlot.updateMany({
+          where: { claimedById: studentId },
+          data: { claimedById: null, claimedAt: null },
+        });
+
+        // Delete personal notices targeting this student
+        await tx.notice.deleteMany({
+          where: { targetStudentId: studentId },
+        });
+
+        // Delete notes authored by this student
+        await tx.note.deleteMany({
+          where: { authorId: studentId },
+        });
+
+        // Delete attendance records
+        await tx.attendance.deleteMany({
+          where: { studentId },
+        });
+
+        // Delete payments
+        await tx.payment.deleteMany({
+          where: { studentId },
+        });
+
+        // Delete assignment submissions
+        await tx.assignmentSubmission.deleteMany({
+          where: { studentId },
+        });
+
+        // Delete team memberships (should cascade, but explicit is safer)
+        await tx.teamMembership.deleteMany({
+          where: { studentId },
+        });
+
+        // Finally, delete the student
+        await tx.student.delete({
+          where: { id: studentId },
+        });
+      });
+
+      return res.json({
+        success: true,
+        message: 'Student and all related records deleted successfully',
+      });
+    } catch (error: any) {
+      console.error('Error deleting student:', error);
       return res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }
