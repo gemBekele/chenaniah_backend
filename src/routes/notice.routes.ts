@@ -181,7 +181,7 @@ router.post('/personal', tokenRequired, async (req: AuthRequest, res: Response) 
   }
 });
 
-// Create notice (admin)
+// Create notice (admin or section leader)
 router.post('/', tokenRequired, async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
@@ -190,7 +190,28 @@ router.post('/', tokenRequired, async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const { title, content, type, active } = req.body;
+    const { title, content, type, active, sectionId } = req.body;
+    const userId = (req.user as any)?.userId;
+    const userRole = (req.user as any)?.role;
+
+    // Authorization check
+    let isAuthorized = userRole === 'admin' || userRole === 'coordinator';
+    
+    if (!isAuthorized && userRole === 'student' && userId) {
+      // Check if they lead the section they are posting to
+      if (sectionId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        if (ledSection && ledSection.id === parseInt(sectionId)) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     if (!title || !content) {
       return res.status(400).json({ error: 'Title and content are required' });
@@ -202,6 +223,7 @@ router.post('/', tokenRequired, async (req: AuthRequest, res: Response) => {
         content,
         type: type || 'info',
         active: active !== undefined ? active : true,
+        sectionId: sectionId ? parseInt(sectionId) : null,
       },
     });
 
@@ -215,7 +237,7 @@ router.post('/', tokenRequired, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Update notice (admin)
+// Update notice (admin or section leader)
 router.put('/:id', tokenRequired, async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
@@ -226,6 +248,35 @@ router.put('/:id', tokenRequired, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { title, content, type, active } = req.body;
+    const userId = (req.user as any)?.userId;
+    const userRole = (req.user as any)?.role;
+
+    const existingNotice = await prisma.notice.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existingNotice) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+
+    // Authorization check
+    let isAuthorized = userRole === 'admin' || userRole === 'coordinator';
+    
+    if (!isAuthorized && userRole === 'student' && userId) {
+      // Check if they lead the section of this notice
+      if (existingNotice.sectionId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        if (ledSection && ledSection.id === existingNotice.sectionId) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const notice = await prisma.notice.update({
       where: { id: parseInt(id) },
@@ -247,7 +298,7 @@ router.put('/:id', tokenRequired, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Delete notice (admin)
+// Delete notice (admin or section leader)
 router.delete('/:id', tokenRequired, async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
@@ -257,6 +308,35 @@ router.delete('/:id', tokenRequired, async (req: AuthRequest, res: Response) => 
 
   try {
     const { id } = req.params;
+    const userId = (req.user as any)?.userId;
+    const userRole = (req.user as any)?.role;
+
+    const existingNotice = await prisma.notice.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existingNotice) {
+      return res.status(404).json({ error: 'Notice not found' });
+    }
+
+    // Authorization check
+    let isAuthorized = userRole === 'admin' || userRole === 'coordinator';
+    
+    if (!isAuthorized && userRole === 'student' && userId) {
+      // Check if they lead the section of this notice
+      if (existingNotice.sectionId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        if (ledSection && ledSection.id === existingNotice.sectionId) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     await prisma.notice.delete({
       where: { id: parseInt(id) },

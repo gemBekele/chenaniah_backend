@@ -47,41 +47,16 @@ async function main() {
   const students = traineesData.students || [];
   console.log(`✅ Found ${students.length} students`);
   
-  // Target phone numbers (using last 8 digits)
-  const targetPhones = [
-    '+251993501018','0994427815','0911689998','0973105050','0944430222','0991329245','0933770902'
-    
-  ];
+  // Extract and process all students
+  const selected = students;
   
-  // Extract last 8 digits from target phones
-  const targetLast8 = targetPhones.map(phone => {
-    const phoneStr = String(phone);
-    return phoneStr.length >= 8 ? phoneStr.slice(-8) : phoneStr;
-  });
-  
-  console.log(`\n🔍 Looking for students with phone numbers ending in: ${targetLast8.join(', ')}`);
-  
-  // Filter students by phone number (last 8 digits)
-  const selected = students.filter(s => {
-    if (!s.phone) return false;
-    const studentPhoneStr = String(s.phone);
-    const studentLast8 = studentPhoneStr.length >= 8 ? studentPhoneStr.slice(-8) : studentPhoneStr;
-    return targetLast8.includes(studentLast8);
-  });
-  
-  console.log(`\n✅ Found ${selected.length} matching students:`);
-  selected.forEach((s, i) => {
-    const phoneStr = String(s.phone || '');
-    const last8 = phoneStr.length >= 8 ? phoneStr.slice(-8) : phoneStr;
-    console.log(`   ${i + 1}. ${s.fullNameEnglish || s.username} (Phone: ${s.phone}, Last 8: ${last8})`);
-  });
-  
-  if (selected.length === 0) {
-    console.log('⚠️  No students found with the specified phone numbers.');
-    process.exit(0);
-  }
+  console.log(`\n✅ Processing all ${selected.length} students:`);
   
   // Create output directory
+  if (fs.existsSync(OUTPUT_DIR)) {
+    // Optionally clear directory or just ensure it exists
+    // fs.rmSync(OUTPUT_DIR, { recursive: true, force: true });
+  }
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
@@ -94,19 +69,18 @@ async function main() {
     
     if (!qrCodeString) {
       console.warn(`   ⚠️  WARNING: Student ${student.fullNameEnglish || student.username} (ID: ${student.id}) does not have a QR code in the database!`);
-      console.warn(`   ⚠️  Generating temporary QR code - this will NOT work for attendance scanning.`);
-      console.warn(`   ⚠️  The student needs to log in to generate their QR code via the API.`);
-      qrCodeString = `STUDENT-${student.id}-${Date.now()}`;
-    } else {
-      console.log(`   📋 Using QR code from database: ${qrCodeString}`);
+      // console.warn(`   ⚠️  Generating temporary QR code - this will NOT work for attendance scanning.`);
+      // qrCodeString = `STUDENT-${student.id}-${Date.now()}`;
+      continue; // Skip if no QR code
     }
     
-    // Get last 8 digits of phone number
-    const phoneStr = String(student.phone || '');
-    const phoneLast8 = phoneStr.length >= 8 ? phoneStr.slice(-8) : phoneStr;
+    // Sanitize student name for filename
+    const studentName = (student.fullNameEnglish || student.username || 'unknown')
+      .trim()
+      .replace(/[/\\?%*:|"<>]/g, '-') // Replace invalid filename characters
+      .replace(/\s+/g, '_');          // Replace spaces with underscores
     
-    // Generate QR code image
-    const filename = `qrcode_${phoneLast8}_${(student.username || 'unknown').replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+    const filename = `${studentName}.png`;
     const filepath = path.join(OUTPUT_DIR, filename);
     
     try {
@@ -116,10 +90,7 @@ async function main() {
         width: 300,
         margin: 1,
       });
-      console.log(`   ✅ Saved: ${filename} (${student.fullNameEnglish || student.username})`);
-      if (student.qrCode) {
-        console.log(`   ✅ QR code value: ${qrCodeString}`);
-      }
+      console.log(`   ✅ Saved: ${filename} for ${student.fullNameEnglish || student.username}`);
     } catch (err) {
       console.error(`   ❌ Failed to generate QR for ${student.username}:`, err.message);
     }

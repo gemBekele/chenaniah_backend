@@ -21,6 +21,9 @@ import notesRoutes from './routes/notes.routes';
 import teamsRoutes from './routes/teams.routes';
 import prayerRoutes from './routes/prayer.routes';
 import sectionRoutes from './routes/section.routes';
+import rolesRoutes from './routes/roles.routes';
+import studentRolesRoutes from './routes/student-roles.routes';
+import studentModulesRoutes from './routes/student-modules.routes';
 
 // Handle BigInt serialization
 (BigInt.prototype as any).toJSON = function () {
@@ -90,6 +93,10 @@ app.use('/api/notes', notesRoutes);
 app.use('/api/teams', teamsRoutes);
 app.use('/api/prayer', prayerRoutes);
 app.use('/api/sections', sectionRoutes);
+app.use('/api/admin/roles', rolesRoutes);
+app.use('/api/admin/student-roles', studentRolesRoutes);
+app.use('/api/student/modules', studentModulesRoutes);
+app.use('/api/student/roles', studentRolesRoutes);
 
 // API Routes - mount under /api/v2 (production frontend)
 app.use('/api/v2/auth', authRoutes);
@@ -111,6 +118,9 @@ app.use('/api/v2/teams', teamsRoutes);
 app.use('/api/v2/prayer', prayerRoutes);
 app.use('/api/v2/sections', sectionRoutes);
 app.use('/api/v2/admin/sections', sectionRoutes);
+app.use('/api/v2/admin/roles', rolesRoutes);
+app.use('/api/v2/admin/student-roles', studentRolesRoutes);
+app.use('/api/v2/student/modules', studentModulesRoutes);
 
 // API Routes - mount under /api/api (for frontend using https://chenaniah.org/api/v2/api)
 // Nginx rewrites /api/v2/api/* to /api/api/*, so we need to handle these paths
@@ -133,6 +143,9 @@ app.use('/api/api/teams', teamsRoutes);
 app.use('/api/api/prayer', prayerRoutes);
 app.use('/api/api/sections', sectionRoutes);
 app.use('/api/api/admin/sections', sectionRoutes);
+app.use('/api/api/admin/roles', rolesRoutes);
+app.use('/api/api/admin/student-roles', studentRolesRoutes);
+app.use('/api/api/student/modules', studentModulesRoutes);
 
 // Serve uploaded files (assignments, payments, resources, student-documents)
 // This route must be before the 404 handler

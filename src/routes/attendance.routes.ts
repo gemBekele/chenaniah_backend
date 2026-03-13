@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import QRCode from 'qrcode';
 import { config } from '../config';
 import { tokenRequired, AuthRequest } from '../middleware/auth';
+import { permissionRequired, adminOrPermission } from '../middleware/rbac';
 import { attendanceService } from '../services/attendance.service';
 import { studentService } from '../services/student.service';
 
@@ -84,7 +85,7 @@ router.get('/student/qrcode/string', tokenRequired, async (req: AuthRequest, res
 });
 
 // Create a new session (coordinator/admin only)
-router.post('/sessions', tokenRequired, async (req: AuthRequest, res: Response) => {
+router.post('/sessions', tokenRequired, adminOrPermission('attendance.create'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -92,11 +93,6 @@ router.post('/sessions', tokenRequired, async (req: AuthRequest, res: Response) 
   }
 
   try {
-    const userRole = (req.user as any)?.role;
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const { name, date, location } = req.body;
 
     if (!name || !date) {
@@ -123,7 +119,7 @@ router.post('/sessions', tokenRequired, async (req: AuthRequest, res: Response) 
 });
 
 // Get all sessions
-router.get('/sessions', tokenRequired, async (req: AuthRequest, res: Response) => {
+router.get('/sessions', tokenRequired, adminOrPermission('attendance.view'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -131,11 +127,6 @@ router.get('/sessions', tokenRequired, async (req: AuthRequest, res: Response) =
   }
 
   try {
-    const userRole = (req.user as any)?.role;
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const { status, dateFrom, dateTo } = req.query;
 
     const filters: any = {};
@@ -156,7 +147,7 @@ router.get('/sessions', tokenRequired, async (req: AuthRequest, res: Response) =
 });
 
 // Get session by ID
-router.get('/sessions/:id', tokenRequired, async (req: AuthRequest, res: Response) => {
+router.get('/sessions/:id', tokenRequired, adminOrPermission('attendance.view'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -164,11 +155,6 @@ router.get('/sessions/:id', tokenRequired, async (req: AuthRequest, res: Respons
   }
 
   try {
-    const userRole = (req.user as any)?.role;
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const sessionId = parseInt(req.params.id, 10);
     if (isNaN(sessionId)) {
       return res.status(400).json({ error: 'Invalid session ID' });
@@ -190,7 +176,7 @@ router.get('/sessions/:id', tokenRequired, async (req: AuthRequest, res: Respons
 });
 
 // Scan QR code and record attendance
-router.post('/scan', tokenRequired, async (req: AuthRequest, res: Response) => {
+router.post('/scan', tokenRequired, adminOrPermission('attendance.create'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -198,11 +184,6 @@ router.post('/scan', tokenRequired, async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const userRole = (req.user as any)?.role;
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const { sessionId, qrCode, scannedAt, isOffline } = req.body;
 
     if (!sessionId || !qrCode) {
@@ -228,7 +209,7 @@ router.post('/scan', tokenRequired, async (req: AuthRequest, res: Response) => {
 });
 
 // Sync offline attendance records
-router.post('/sync', tokenRequired, async (req: AuthRequest, res: Response) => {
+router.post('/sync', tokenRequired, adminOrPermission('attendance.create'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -236,11 +217,6 @@ router.post('/sync', tokenRequired, async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const userRole = (req.user as any)?.role;
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const { records } = req.body;
 
     if (!Array.isArray(records) || records.length === 0) {
@@ -264,7 +240,7 @@ router.post('/sync', tokenRequired, async (req: AuthRequest, res: Response) => {
 });
 
 // Get session statistics
-router.get('/sessions/:id/stats', tokenRequired, async (req: AuthRequest, res: Response) => {
+router.get('/sessions/:id/stats', tokenRequired, adminOrPermission('attendance.view'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -272,11 +248,6 @@ router.get('/sessions/:id/stats', tokenRequired, async (req: AuthRequest, res: R
   }
 
   try {
-    const userRole = (req.user as any)?.role;
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const sessionId = parseInt(req.params.id, 10);
     if (isNaN(sessionId)) {
       return res.status(400).json({ error: 'Invalid session ID' });
@@ -295,7 +266,7 @@ router.get('/sessions/:id/stats', tokenRequired, async (req: AuthRequest, res: R
 });
 
 // Update session status
-router.put('/sessions/:id/status', tokenRequired, async (req: AuthRequest, res: Response) => {
+router.put('/sessions/:id/status', tokenRequired, adminOrPermission('attendance.edit'), async (req: AuthRequest, res: Response) => {
   addCorsHeaders(res, req);
 
   if (req.method === 'OPTIONS') {
@@ -303,11 +274,6 @@ router.put('/sessions/:id/status', tokenRequired, async (req: AuthRequest, res: 
   }
 
   try {
-    const userRole = (req.user as any)?.role;
-    if (userRole !== 'coordinator' && userRole !== 'admin') {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
     const sessionId = parseInt(req.params.id, 10);
     if (isNaN(sessionId)) {
       return res.status(400).json({ error: 'Invalid session ID' });

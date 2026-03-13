@@ -1,4 +1,5 @@
 import prisma from '../db';
+import { seedPermissions } from '../services/permission.service';
 
 async function initDatabase() {
   try {
@@ -39,7 +40,11 @@ async function initDatabase() {
       },
     });
 
+    // Seed RBAC permissions
+    await seedPermissions();
+
     console.log('✅ Database initialized with default settings');
+    console.log('✅ RBAC permissions seeded');
   } catch (error) {
     console.error('❌ Error initializing database:', error);
     throw error;

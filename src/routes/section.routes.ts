@@ -132,4 +132,63 @@ router.post('/:id/leader', tokenRequired, adminRequired, async (req: AuthRequest
   }
 });
 
+// Get a single section by ID
+router.get('/:id', tokenRequired, async (req: AuthRequest, res: Response) => {
+  try {
+    const sectionId = parseInt(req.params.id);
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+
+    // Authorization check
+    let isAuthorized = userRole === 'admin' || userRole === 'coordinator';
+    
+    if (!isAuthorized && userRole === 'student' && userId) {
+      // Check if they lead this specific section
+      const ledSection = await prisma.section.findUnique({
+        where: { leaderId: userId }
+      });
+      if (ledSection && ledSection.id === sectionId) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const section = await prisma.section.findUnique({
+      where: { id: sectionId },
+      include: {
+        leader: {
+          select: {
+            id: true,
+            username: true,
+            fullNameEnglish: true,
+            fullNameAmharic: true,
+          },
+        },
+        _count: {
+          select: {
+            students: true,
+            resources: true,
+            notices: true,
+          },
+        },
+      },
+    });
+
+    if (!section) {
+      return res.status(404).json({ error: 'Section not found' });
+    }
+
+    return res.json({
+      success: true,
+      section,
+    });
+  } catch (error: any) {
+    console.error('Error fetching section details:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

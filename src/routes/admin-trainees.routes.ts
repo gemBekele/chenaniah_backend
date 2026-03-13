@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { tokenRequired, roleRequired, AuthRequest } from '../middleware/auth';
+import { permissionRequired, adminOrPermission } from '../middleware/rbac';
 import { studentService } from '../services/student.service';
 import { assignmentService } from '../services/assignment.service';
 import { paymentService } from '../services/payment.service';
 import { config } from '../config';
+import prisma from '../db';
 
 const router = Router();
 
@@ -26,7 +28,7 @@ const addCorsHeaders = (res: Response, req: Request) => {
 router.get(
   '/',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('trainees.view'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -36,10 +38,29 @@ router.get(
 
     try {
       const status = req.query.status as string | undefined;
-      const sectionId = req.query.sectionId ? parseInt(req.query.sectionId as string) : undefined;
+      let sectionId = req.query.sectionId ? parseInt(req.query.sectionId as string) : undefined;
       const searchQuery = req.query.search as string | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const offset = parseInt(req.query.offset as string) || 0;
+
+      const userId = req.user?.userId;
+      const userRole = req.user?.role;
+
+      // Section leader restriction
+      if (userRole === 'student' && userId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        
+        if (ledSection) {
+          // Force filter to their section
+          sectionId = ledSection.id;
+        } else {
+          // If not a leader and not admin, but somehow passed adminOrPermission, 
+          // they shouldn't see anyone unless assigned specific permissions
+          // checkStudentAccess already handled this via adminOrPermission middleware
+        }
+      }
 
       const result = await studentService.getAllStudents({
         status,
@@ -65,7 +86,7 @@ router.get(
 router.get(
   '/:id',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('trainees.view'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -77,6 +98,28 @@ router.get(
       const studentId = parseInt(req.params.id);
       if (isNaN(studentId)) {
         return res.status(400).json({ error: 'Invalid student ID' });
+      }
+
+      const userId = req.user?.userId;
+      const userRole = req.user?.role;
+
+      // Section leader restriction
+      if (userRole === 'student' && userId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        
+        if (ledSection) {
+          // Verify target student is in this section
+          const targetStudent = await prisma.student.findUnique({
+            where: { id: studentId },
+            select: { sectionId: true }
+          });
+          
+          if (!targetStudent || targetStudent.sectionId !== ledSection.id) {
+            return res.status(403).json({ error: 'Access denied: Student not in your section' });
+          }
+        }
       }
 
       const stats = await studentService.getStudentStats(studentId);
@@ -96,7 +139,7 @@ router.get(
 router.put(
   '/:id/status',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('trainees.edit'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -112,11 +155,32 @@ router.put(
         return res.status(400).json({ error: 'Invalid student ID' });
       }
 
+      const prisma = (await import('../db')).default;
+      const userId = req.user?.userId;
+      const userRole = req.user?.role;
+
+      // Section leader restriction
+      if (userRole === 'student' && userId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        
+        if (ledSection) {
+          const targetStudent = await prisma.student.findUnique({
+            where: { id: studentId },
+            select: { sectionId: true }
+          });
+          
+          if (!targetStudent || targetStudent.sectionId !== ledSection.id) {
+            return res.status(403).json({ error: 'Access denied: Student not in your section' });
+          }
+        }
+      }
+
       if (!status || !['active', 'inactive', 'graduated', 'dismissed'].includes(status)) {
         return res.status(400).json({ error: 'Invalid status' });
       }
 
-      const prisma = (await import('../db')).default;
       const student = await prisma.student.update({
         where: { id: studentId },
         data: { status },
@@ -139,7 +203,7 @@ router.put(
 router.put(
   '/:id/section',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('trainees.edit'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -150,15 +214,43 @@ router.put(
     try {
       const studentId = parseInt(req.params.id);
       const { sectionId } = req.body;
+      const prisma = (await import('../db')).default;
 
       if (isNaN(studentId)) {
         return res.status(400).json({ error: 'Invalid student ID' });
       }
 
-      const prisma = (await import('../db')).default;
+      const userId = req.user?.userId;
+      const userRole = req.user?.role;
+
+      // Section leader restriction
+      if (userRole === 'student' && userId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        
+        if (ledSection) {
+          const targetStudent = await prisma.student.findUnique({
+            where: { id: studentId },
+            select: { sectionId: true }
+          });
+          
+          if (!targetStudent || targetStudent.sectionId !== ledSection.id) {
+            return res.status(403).json({ error: 'Access denied: Student not in your section' });
+          }
+          
+          // leaders shouldn't be able to move students OUT of their section or into another section
+          // but if they are setting it TO their section (already is), that's fine(?) 
+          // actually, usually only admins move students.
+          // For now let's just block section moves by leaders.
+          return res.status(403).json({ error: 'Access denied: Leaders cannot move students between sections' });
+        }
+      }
+
+      // Update the student's section
       const student = await prisma.student.update({
         where: { id: studentId },
-        data: { sectionId: sectionId ? parseInt(sectionId) : null } as any,
+        data: { sectionId },
       });
 
       const { passwordHash, ...studentWithoutPassword } = student;
@@ -178,7 +270,7 @@ router.put(
 router.delete(
   '/:id',
   tokenRequired,
-  roleRequired(['admin']),
+  roleRequired(['admin']), // Keep admin-only for delete operations
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -268,7 +360,7 @@ router.delete(
 router.get(
   '/assignments/all',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('assignments.view'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -293,7 +385,7 @@ router.get(
 router.get(
   '/assignments/:id',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('assignments.view'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -324,7 +416,7 @@ router.get(
 router.put(
   '/assignments/submissions/:id/grade',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('assignments.edit'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -366,7 +458,7 @@ router.put(
 router.get(
   '/payments/all',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('payments.view'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -405,7 +497,7 @@ router.get(
 router.put(
   '/payments/:id/status',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('payments.edit'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -442,7 +534,7 @@ router.put(
 router.post(
   '/assignments',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('assignments.create'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -478,7 +570,7 @@ router.post(
 router.post(
   '/payments/generate',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('payments.create'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 

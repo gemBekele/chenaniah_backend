@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { tokenRequired, roleRequired, AuthRequest } from '../middleware/auth';
+import { adminOrPermission } from '../middleware/rbac';
 import { config } from '../config';
 import prisma from '../db';
 import * as fs from 'fs';
@@ -95,7 +96,7 @@ router.get('/', tokenRequired, async (req: AuthRequest, res: Response) => {
 router.get(
   '/all',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('resources.view'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -104,7 +105,31 @@ router.get(
     }
 
     try {
+      const sectionIdQuery = req.query.sectionId ? parseInt(req.query.sectionId as string) : undefined;
+      const userId = req.user?.userId;
+      const userRole = req.user?.role;
+
+      const where: any = {};
+
+      // If student (checked by adminOrPermission already), force filter to their section
+      if (userRole === 'student' && userId) {
+        const ledSection = await prisma.section.findUnique({
+          where: { leaderId: userId }
+        });
+        
+        if (ledSection) {
+          where.sectionId = ledSection.id;
+        } else {
+          // Fallback if somehow passed middleware without being a leader
+          // (permissions should still apply, but for simplicity we'll show nothing if not configured)
+          where.id = -1; 
+        }
+      } else if (sectionIdQuery) {
+        where.sectionId = sectionIdQuery;
+      }
+
       const resources = await prisma.resource.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
       });
 
@@ -169,7 +194,7 @@ router.get('/categories', tokenRequired, async (req: AuthRequest, res: Response)
 router.post(
   '/',
   tokenRequired,
-  roleRequired(['admin']),
+  adminOrPermission('resources.create'),
   async (req: AuthRequest, res: Response) => {
     addCorsHeaders(res, req);
 
@@ -221,21 +246,46 @@ router.post(
   }
 );
 
-// Upload file resource(s) (admin or section leader) - supports multiple files
+// Upload file resource(s) (admin or section leader or student with resources permission) - supports multiple files
 router.post(
   '/upload',
   tokenRequired,
   async (req: AuthRequest, res: Response, next) => {
-    // Custom authorization: admin or section leader
-    if (req.user?.role === 'admin') {
+    // Custom authorization: admin or section leader or student with resources permission
+    if (req.user?.role === 'admin' || req.user?.role === 'coordinator') {
       return next();
     }
     
     if (req.user?.role === 'student' && req.user.userId) {
+      // Check if student leads a section
       const ledSection = await prisma.section.findUnique({
         where: { leaderId: req.user.userId }
       });
       if (ledSection) {
+        return next();
+      }
+      
+      // Check if student has resources permission
+      const studentRoles = await prisma.studentRole.findMany({
+        where: { studentId: req.user.userId },
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: {
+                  permission: true
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      const hasResourcesPermission = studentRoles.some(sr => 
+        sr.role.permissions.some(p => p.permission.module === 'resources')
+      );
+      
+      if (hasResourcesPermission) {
         return next();
       }
     }
@@ -397,7 +447,7 @@ router.post(
   }
 );
 
-// Delete resource(s) (admin)
+// Delete resource(s) (admin) - keep admin-only
 router.delete(
   '/:id',
   tokenRequired,
@@ -470,7 +520,7 @@ router.delete(
   }
 );
 
-// Delete multiple resources (admin) - accepts array of IDs in body
+// Delete multiple resources (admin) - keep admin-only
 router.delete(
   '/',
   tokenRequired,
