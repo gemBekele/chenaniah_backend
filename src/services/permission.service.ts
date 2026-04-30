@@ -8,19 +8,19 @@ export interface Permission {
   description: string | null;
 }
 
-export const PERMISSIONS = {
-  payments: ['payments'],
-  attendance: ['attendance'],
-  resources: ['resources'],
-  assignments: ['assignments'],
-  trainees: ['trainees'],
-  sections: ['sections'],
-  notices: ['notices'],
-  teams: ['teams'],
-  notes: ['notes'],
-  applications: ['applications'],
-  interview: ['interview'],
-  timeSlots: ['timeSlots'],
+export const PERMISSIONS: Record<string, string[]> = {
+  payments: ['view', 'create', 'edit', 'delete'],
+  attendance: ['view', 'create', 'edit'],
+  resources: ['view', 'create', 'edit', 'delete'],
+  assignments: ['view', 'create', 'edit', 'delete'],
+  trainees: ['view', 'create', 'edit', 'delete'],
+  sections: ['view', 'create', 'edit', 'delete'],
+  notices: ['view', 'create', 'edit', 'delete'],
+  teams: ['view', 'create', 'edit', 'delete'],
+  notes: ['view', 'create', 'edit', 'delete'],
+  applications: ['view', 'create', 'edit', 'delete'],
+  interview: ['view', 'create', 'edit', 'delete'],
+  timeSlots: ['view', 'create', 'edit', 'delete'],
 };
 
 export const MODULES = [
@@ -41,13 +41,13 @@ export const MODULES = [
 export async function seedPermissions(): Promise<void> {
   const permissionsToCreate = [];
   
-  for (const [module, perms] of Object.entries(PERMISSIONS)) {
-    for (const perm of perms) {
+  for (const [module, actions] of Object.entries(PERMISSIONS)) {
+    for (const action of actions) {
       permissionsToCreate.push({
-        name: perm,
-        module: perm,
-        action: 'access',
-        description: `Access to ${perm} module`,
+        name: `${module}.${action}`,
+        module,
+        action,
+        description: `${action} access for ${module} module`,
       });
     }
   }
@@ -114,7 +114,7 @@ export async function getStudentAccessibleModules(studentId: number): Promise<st
   const modules = new Set<string>();
   
   for (const perm of permissions) {
-    const [module] = perm.split('.');
+    const module = perm.includes('.') ? perm.split('.')[0] : perm;
     modules.add(module);
   }
 
@@ -131,14 +131,12 @@ export async function checkStudentAccess(
   requiredPermission: string
 ): Promise<boolean> {
   const permissions = await getStudentPermissions(studentId);
-  
-  const [module] = requiredPermission.split('.');
-  
-  for (const perm of permissions) {
-    if (perm === module) {
-      return true;
-    }
+
+  if (permissions.includes(requiredPermission)) {
+    return true;
   }
-  
-  return false;
+
+  // Backward compatibility: older roles may still store module-only names.
+  const [module] = requiredPermission.split('.');
+  return permissions.includes(module);
 }
